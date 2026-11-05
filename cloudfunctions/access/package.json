@@ -1,0 +1,9 @@
+{
+  "name": "access",
+  "version": "1.0.0",
+  "description": "道闸白名单与核验",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

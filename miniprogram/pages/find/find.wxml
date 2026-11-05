@@ -1,0 +1,70 @@
+<view class="page">
+
+  <!-- 日期选择 -->
+  <scroll-view scroll-x class="date-scroll" enhanced show-scrollbar="{{false}}">
+    <view class="date-bar">
+      <view
+        class="date-item {{item.value === curDate ? 'date-item-on' : ''}}"
+        wx:for="{{dates}}"
+        wx:key="value"
+        bindtap="onDate"
+        data-value="{{item.value}}">
+        <view class="date-d">{{item.day}}</view>
+        <view class="date-w">{{item.week}}</view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="sec">
+    <view class="sec-title">可租车位</view>
+    <view class="sec-hint">{{availableCount}} 个可租 / 共 {{totalCount}} 个发布</view>
+  </view>
+
+  <!-- 列表 -->
+  <block wx:if="{{list.length > 0}}">
+    <view
+      class="slot-card"
+      wx:for="{{list}}"
+      wx:key="id"
+      bindtap="goDetail"
+      data-id="{{item.id}}"
+      hover-class="slot-card-hover">
+
+      <view class="row-between">
+        <view class="flex1">
+          <view class="row">
+            <text class="slot-no">{{item.spotNo}}</text>
+            <text class="tag {{item.stateCls}} slot-tag">{{item.stateText}}</text>
+          </view>
+          <view class="tiny muted mt8">{{item.building}} · {{item.ownerName}} 的车位</view>
+          <view class="tiny muted">{{item.timeText}} · 共 {{item.hoursText}}</view>
+        </view>
+        <view class="slot-right">
+          <view class="price">{{item.priceText}}</view>
+          <view class="slot-arrow">›</view>
+        </view>
+      </view>
+
+      <view class="slot-foot">
+        <text>{{item.unitText}}</text>
+        <text class="slot-verified">✓ 物业已核验产权</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 空状态 -->
+  <view class="empty" wx:else>
+    <text class="empty-ico">🅿️</text>
+    <view class="empty-txt">这一天还没有业主放出车位</view>
+    <view class="tiny muted mt8">试试换个日期，或让邻居去「出租我的车位」发布</view>
+    <view class="btn btn-line mt24" style="width: 320rpx; margin: 24rpx auto 0;" bindtap="onRefresh">刷新试试</view>
+  </view>
+
+  <view class="notice mt24">
+    <view class="notice-title">停放说明</view>
+    <view class="notice-line">· 车位均通过物业产权核验，人防车位不参与出租</view>
+    <view class="notice-line">· 支付后车牌自动下发道闸白名单，无需联系业主</view>
+    <view class="notice-line">· 预约开始前 30 分钟生效，结束时刻失效</view>
+    <view class="notice-line">· 超时按 1.5 倍时价自动计费，出场结算</view>
+  </view>
+</view>

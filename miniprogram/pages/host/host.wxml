@@ -1,0 +1,255 @@
+<view class="page">
+
+  <view class="seg">
+    <view class="seg-item {{tab === 'spot' ? 'seg-item-on' : ''}}" bindtap="onTab" data-tab="spot">我的车位</view>
+    <view class="seg-item {{tab === 'publish' ? 'seg-item-on' : ''}}" bindtap="onTab" data-tab="publish">发布时段</view>
+    <view class="seg-item {{tab === 'income' ? 'seg-item-on' : ''}}" bindtap="onTab" data-tab="income">收益</view>
+  </view>
+
+  <!-- ================= 我的车位 ================= -->
+  <block wx:if="{{tab === 'spot'}}">
+    <block wx:if="{{spot}}">
+      <view class="card">
+        <view class="row-between">
+          <view class="row">
+            <view class="spot-avatar">{{spot.building}}</view>
+            <view style="margin-left: 20rpx;">
+              <view class="row">
+                <text class="spot-title">{{spot.spotNo}}</text>
+                <text class="tag {{spot.status === 'approved' ? 'tag-green' : 'tag-amber'}} spot-tag">
+                  {{spot.status === 'approved' ? '已认证' : (spot.status === 'pending' ? '审核中' : '已驳回')}}
+                </text>
+              </view>
+              <view class="tiny muted mt8">{{spot.ownerName}} · {{spot.plate}}</view>
+              <view class="tiny muted">{{spot.certType}}</view>
+            </view>
+          </view>
+          <view class="btn btn-sm btn-ghost" bindtap="openPrice" wx:if="{{spot.status === 'approved'}}">改价</view>
+        </view>
+
+        <view class="divider"></view>
+
+        <view class="row-between">
+          <view class="price-box">
+            <view class="price">{{spot.pricePerHour}}<text class="price-unit">元/时</text></view>
+            <view class="tiny muted">日封顶 ¥{{spot.dayCap}}</view>
+          </view>
+          <view class="price-box">
+            <view class="big">{{availableCount}}</view>
+            <view class="tiny muted">在售时段</view>
+          </view>
+          <view class="price-box">
+            <view class="big">{{liveCount}}</view>
+            <view class="tiny muted">进行中订单</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="card" wx:if="{{spot.status === 'pending'}}">
+        <view class="bold amber">物业审核中</view>
+        <view class="tiny muted mt8">审核通过后即可发布空闲时段并收取租金。</view>
+      </view>
+
+      <view class="btn btn-primary btn-block" bindtap="onTab" data-tab="publish" wx:if="{{spot.status === 'approved'}}">去发布空闲时段</view>
+      <view class="btn btn-line btn-block mt16" bindtap="onTab" data-tab="income">查看收益</view>
+    </block>
+
+    <view class="empty" wx:else>
+      <text class="empty-ico">🅿️</text>
+      <view class="empty-txt">你还没有备案车位</view>
+      <view class="tiny muted mt8">提交车位号与产权信息，物业审核通过后就能出租赚钱</view>
+      <view class="btn btn-primary" style="width: 360rpx; margin: 32rpx auto 0;" bindtap="openApply">立即备案</view>
+    </view>
+  </block>
+
+  <!-- ================= 发布时段 ================= -->
+  <block wx:if="{{tab === 'publish'}}">
+    <view class="card">
+      <view class="sec-title" style="margin-bottom: 6rpx;">一键发布</view>
+      <view class="tiny muted">出游 / 出差时最快 3 秒挂出租</view>
+
+      <view class="quick" bindtap="onPublishWeekend" hover-class="quick-hover">
+        <view class="quick-ico">🚗</view>
+        <view class="flex1">
+          <view class="bold">周末出游 · 挂两天</view>
+          <view class="tiny muted">本周六、周日 08:00 – 20:00</view>
+        </view>
+        <view class="quick-arrow">›</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="sec-title" style="margin-bottom: 6rpx;">自定义时段</view>
+
+      <view class="field">
+        <view class="field-label">日期</view>
+        <picker mode="date" value="{{pubDate}}" start="{{today}}" bindchange="onPubDate">
+          <view class="picker-value">{{pubDate}}</view>
+        </picker>
+      </view>
+
+      <view class="row mt24">
+        <view class="flex1" style="margin-right: 16rpx;">
+          <view class="field-label">开始时间</view>
+          <picker mode="time" value="{{pubFrom}}" bindchange="onPubFrom">
+            <view class="picker-value">{{pubFrom}}</view>
+          </picker>
+        </view>
+        <view class="flex1">
+          <view class="field-label">结束时间</view>
+          <picker mode="time" value="{{pubTo}}" bindchange="onPubTo">
+            <view class="picker-value">{{pubTo}}</view>
+          </picker>
+        </view>
+      </view>
+
+      <view class="sum-box">
+        <view class="row-between">
+          <text class="small muted">预计到手（75%）</text>
+          <text class="price">{{estIncome}}</text>
+        </view>
+      </view>
+
+      <view class="btn btn-primary btn-block mt24" bindtap="onPublish">确认发布</view>
+    </view>
+
+    <view class="sec">
+      <view class="sec-title">我发布的时段</view>
+      <view class="sec-hint">{{availableCount}} 个在售</view>
+    </view>
+
+    <block wx:if="{{slots.length > 0}}">
+      <view class="slot-row" wx:for="{{slots}}" wx:key="id">
+        <view class="flex1">
+          <view class="bold">{{item.dateLabel}} {{item.timeText}}</view>
+          <view class="tiny muted mt8">{{item.hoursText}} · 标价 {{item.priceText}}</view>
+        </view>
+        <text class="tag {{item.stateCls}}">{{item.stateText}}</text>
+        <view class="btn btn-sm btn-ghost" style="margin-left: 16rpx;" bindtap="onUnpublish" data-id="{{item.id}}" wx:if="{{item.available}}">下架</view>
+      </view>
+    </block>
+    <view class="empty" wx:else>
+      <text class="empty-ico">📅</text>
+      <view class="empty-txt">还没有发布时段</view>
+    </view>
+  </block>
+
+  <!-- ================= 收益 ================= -->
+  <block wx:if="{{tab === 'income'}}">
+    <view class="hero">
+      <view class="hero-sub">累计收益（已扣平台与物业分成）</view>
+      <view class="hero-money">{{incomeText}}</view>
+      <view class="hero-row">
+        <view class="hero-stat">
+          <view class="hero-num">{{finishedCount}}</view>
+          <view class="hero-lbl">已完成订单</view>
+        </view>
+        <view class="hero-stat">
+          <view class="hero-num">{{liveCount}}</view>
+          <view class="hero-lbl">进行中</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="sec">
+      <view class="sec-title">订单明细</view>
+      <view class="sec-hint">业主分成 75%</view>
+    </view>
+
+    <block wx:if="{{orders.length > 0}}">
+      <view class="order-card" wx:for="{{orders}}" wx:key="id">
+        <view class="row-between">
+          <view class="row">
+            <text class="order-spot">{{item.dateLabel}} {{item.timeText}}</text>
+            <text class="tag {{item.statusCls}} order-tag">{{item.statusLabel}}</text>
+          </view>
+          <text class="tiny muted">{{item.spotNo}}</text>
+        </view>
+        <view class="divider"></view>
+        <view class="kv"><text class="kv-k">租客 / 车牌</text><text class="kv-v">{{item.renterName}} · {{item.plate}}</text></view>
+        <view class="kv"><text class="kv-k">订单金额</text><text class="kv-v">{{item.totalText}}</text></view>
+        <view class="kv"><text class="kv-k">我的收入</text><text class="kv-v green">{{item.incomeText}}</text></view>
+      </view>
+    </block>
+    <view class="empty" wx:else>
+      <text class="empty-ico">💰</text>
+      <view class="empty-txt">还没有租金收入</view>
+    </view>
+  </block>
+</view>
+
+<!-- ============ 车位备案弹层 ============ -->
+<view class="mask" wx:if="{{showApply}}" bindtap="closeApply">
+  <view class="sheet" catchtap="noop">
+    <view class="row-between">
+      <view class="sheet-h">车位备案</view>
+      <view class="sheet-x" bindtap="closeApply">×</view>
+    </view>
+    <view class="tiny muted">请如实填写，物业将核验产权证明后开通出租权限</view>
+
+    <view class="field">
+      <view class="field-label">楼栋</view>
+      <input class="field-input" placeholder="如：7栋" placeholder-class="field-input-placeholder"
+             value="{{apply.building}}" data-key="building" bindinput="onApplyInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">车位号</view>
+      <input class="field-input" placeholder="如：B1-082" placeholder-class="field-input-placeholder"
+             value="{{apply.spotNo}}" data-key="spotNo" bindinput="onApplyInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">车牌号</view>
+      <input class="field-input" placeholder="如：沪A·2K78" placeholder-class="field-input-placeholder"
+             value="{{apply.plate}}" data-key="plate" bindinput="onApplyInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">车位性质</view>
+      <picker mode="selector" range="{{certTypes}}" value="{{certIndex}}" bindchange="onCertChange">
+        <view class="picker-value">{{certTypes[certIndex]}}</view>
+      </picker>
+    </view>
+
+    <view class="row mt24">
+      <view class="flex1" style="margin-right: 16rpx;">
+        <view class="field-label">时价（元/时）</view>
+        <input class="field-input" type="number" value="{{apply.pricePerHour}}" data-key="pricePerHour" bindinput="onApplyInput" />
+      </view>
+      <view class="flex1">
+        <view class="field-label">日封顶（元）</view>
+        <input class="field-input" type="number" value="{{apply.dayCap}}" data-key="dayCap" bindinput="onApplyInput" />
+      </view>
+    </view>
+
+    <view class="tips-box">
+      人防车位不得用于盈利性转租，请勿提交；月租车位需确认租赁合同允许转租。
+    </view>
+
+    <view class="btn btn-primary btn-block mt24" bindtap="submitApply">提交审核</view>
+  </view>
+</view>
+
+<!-- ============ 改价弹层 ============ -->
+<view class="mask" wx:if="{{showPrice}}" bindtap="closePrice">
+  <view class="sheet" catchtap="noop">
+    <view class="row-between">
+      <view class="sheet-h">调整价格</view>
+      <view class="sheet-x" bindtap="closePrice">×</view>
+    </view>
+    <view class="tiny muted">参考：周边小区时价 8–15 元，日封顶 40–70 元</view>
+
+    <view class="field">
+      <view class="field-label">时价（元/小时）</view>
+      <input class="field-input" type="digit" value="{{editPrice}}" bindinput="onEditPrice" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">日封顶（元）</view>
+      <input class="field-input" type="digit" value="{{editCap}}" bindinput="onEditCap" />
+    </view>
+
+    <view class="btn btn-primary btn-block mt24" bindtap="submitPrice">保存</view>
+  </view>
+</view>

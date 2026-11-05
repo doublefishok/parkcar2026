@@ -1,0 +1,64 @@
+<view class="page">
+
+  <view class="hero">
+    <view class="row">
+      <view class="hero-avatar">{{avatarText}}</view>
+      <view style="margin-left: 24rpx;">
+        <view class="hero-title" style="font-size: 36rpx;">{{user.nickName || '未登录'}}</view>
+        <view class="hero-sub">{{community.name || '阳光花园'}} · {{user.building || '7栋'}}</view>
+        <view class="hero-sub">手机号 {{phoneText || '—'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="sec">
+    <view class="sec-title">当前身份</view>
+    <view class="sec-hint">不同身份进入不同工作台</view>
+  </view>
+
+  <view class="card">
+    <view
+      class="role-row {{role === item.key ? 'role-row-on' : ''}}"
+      wx:for="{{roles}}"
+      wx:key="key"
+      bindtap="onRole"
+      data-role="{{item.key}}">
+      <view class="role-ico">{{item.ico}}</view>
+      <view class="flex1">
+        <view class="bold">{{item.name}}</view>
+        <view class="tiny muted">{{item.desc}}</view>
+      </view>
+      <view class="role-check" wx:if="{{role === item.key}}">✓</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="sec-title" style="margin-bottom: 10rpx;">使用说明</view>
+    <view class="rule">· 业主发布空闲时段，系统按小时计价、日封顶</view>
+    <view class="rule">· 租客下单支付后，车牌自动下发道闸白名单</view>
+    <view class="rule">· 预约开始前 30 分钟生效，结束时刻失效</view>
+    <view class="rule">· 超时按 1.5 倍时价自动计费，出场结算</view>
+    <view class="rule">· 分账：平台 10% / 物业 15% / 业主 75%</view>
+  </view>
+
+  <view class="card" wx:if="{{mockMode}}">
+    <view class="row-between">
+      <view>
+        <view class="bold">演示模式</view>
+        <view class="tiny muted mt8">当前使用本地模拟数据，未连接云开发</view>
+      </view>
+      <view class="btn btn-sm btn-ghost" bindtap="onReset">重置数据</view>
+    </view>
+  </view>
+
+  <view class="card" bindtap="copyVersion">
+    <view class="kv"><text class="kv-k">版本</text><text class="kv-v">v{{version}}</text></view>
+    <view class="kv"><text class="kv-k">运行模式</text><text class="kv-v">{{mockMode ? '本地演示' : '云开发'}}</text></view>
+    <view class="kv"><text class="kv-k">道闸</text><text class="kv-v">{{community.barrier || '—'}}</text></view>
+    <view class="kv"><text class="kv-k">对接模式</text><text class="kv-v">{{community.barrierMode || 'L2 白名单'}}</text></view>
+  </view>
+
+  <view class="btn btn-line btn-block mt24" bindtap="goIndex">返回首页</view>
+
+  <view class="foot-tip">邻里车位 · 社区闲置车位分时共享</view>
+</view>

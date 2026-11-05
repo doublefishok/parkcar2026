@@ -1,0 +1,295 @@
+/* ============================================================
+   邻里车位 · 全局样式 / 设计系统
+   主色 #16a34a  辅色 #0284c7  警告 #f59e0b  危险 #ef4444
+   ============================================================ */
+page {
+  background: #f4f6f8;
+  color: #0f172a;
+  font-size: 28rpx;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  line-height: 1.5;
+}
+
+.page {
+  padding: 24rpx 24rpx 60rpx;
+  box-sizing: border-box;
+  min-height: 100vh;
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(15, 23, 42, 0.06);
+}
+.card-flat {
+  background: #fff;
+  border-radius: 24rpx;
+  margin-bottom: 24rpx;
+  overflow: hidden;
+}
+
+/* ---------- 排版 ---------- */
+.row { display: flex; align-items: center; }
+.row-between { display: flex; align-items: center; justify-content: space-between; }
+.col { display: flex; flex-direction: column; }
+.flex1 { flex: 1; min-width: 0; }
+.muted { color: #64748b; }
+.tiny { font-size: 22rpx; }
+.small { font-size: 24rpx; }
+.bold { font-weight: 700; }
+.heavy { font-weight: 800; }
+.big { font-size: 40rpx; font-weight: 800; letter-spacing: -1rpx; }
+.green { color: #15803d; }
+.blue { color: #0369a1; }
+.red { color: #dc2626; }
+.amber { color: #b45309; }
+.center { text-align: center; }
+.mt8 { margin-top: 8rpx; }
+.mt16 { margin-top: 16rpx; }
+.mt24 { margin-top: 24rpx; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.sec {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 8rpx 4rpx 18rpx;
+}
+.sec-title { font-size: 29rpx; font-weight: 700; color: #334155; }
+.sec-hint { font-size: 22rpx; color: #94a3b8; }
+
+.divider {
+  height: 1px;
+  background: #eef2f6;
+  margin: 20rpx 0;
+}
+
+/* ---------- 标签 ---------- */
+.tag {
+  display: inline-block;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 1.7;
+  padding: 0 12rpx;
+  border-radius: 20rpx;
+  white-space: nowrap;
+}
+.tag-green { background: #dcfce7; color: #15803d; }
+.tag-blue { background: #e0f2fe; color: #0369a1; }
+.tag-amber { background: #fef3c7; color: #b45309; }
+.tag-red { background: #fee2e2; color: #b91c1c; }
+.tag-gray { background: #f1f5f9; color: #64748b; }
+.tag-dark { background: rgba(255,255,255,.18); color: #fff; }
+
+
+/* ---------- 键值行 ---------- */
+.kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8rpx 0;
+  font-size: 25rpx;
+}
+.kv-k { color: #64748b; flex: 0 0 auto; }
+.kv-v { color: #0f172a; font-weight: 500; text-align: right; max-width: 62%; }
+
+/* ---------- 按钮 ---------- */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  padding: 0 32rpx;
+  border-radius: 18rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  background: #16a34a;
+  color: #fff;
+  box-sizing: border-box;
+}
+.btn-hover { opacity: 0.85; transform: scale(0.99); }
+.btn-primary { background: linear-gradient(135deg, #16a34a, #22c55e); }
+.btn-blue { background: linear-gradient(135deg, #0284c7, #0ea5e9); }
+.btn-ghost { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
+.btn-danger { background: #ef4444; }
+.btn-block { width: 100%; }
+.btn-sm { height: 60rpx; padding: 0 24rpx; font-size: 24rpx; border-radius: 14rpx; }
+.btn-disabled { background: #e2e8f0 !important; color: #94a3b8 !important; }
+.btn-line {
+  height: 72rpx;
+  background: transparent;
+  border: 1rpx solid #16a34a;
+  color: #15803d;
+}
+
+/* ---------- 表单 ---------- */
+.field { margin-top: 24rpx; }
+.field-label {
+  font-size: 24rpx;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+}
+.field-input {
+  height: 88rpx;
+  line-height: 88rpx;
+  background: #f8fafc;
+  border: 1rpx solid #e8ecf1;
+  border-radius: 16rpx;
+  padding: 0 22rpx;
+  font-size: 28rpx;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+.field-input-placeholder { color: #a8b3c2; }
+.picker-value {
+  height: 88rpx;
+  line-height: 88rpx;
+  background: #f8fafc;
+  border: 1rpx solid #e8ecf1;
+  border-radius: 16rpx;
+  padding: 0 22rpx;
+  font-size: 28rpx;
+}
+
+/* ---------- 分段切换 ---------- */
+.seg {
+  display: flex;
+  background: #e8edf3;
+  border-radius: 18rpx;
+  padding: 6rpx;
+  margin-bottom: 24rpx;
+}
+.seg-item {
+  flex: 1;
+  text-align: center;
+  height: 64rpx;
+  line-height: 64rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #64748b;
+  border-radius: 14rpx;
+}
+.seg-item-on {
+  background: #fff;
+  color: #15803d;
+  box-shadow: 0 2rpx 8rpx rgba(15, 23, 42, 0.1);
+}
+
+/* ---------- 日期条 ---------- */
+.date-bar {
+  white-space: nowrap;
+  margin-bottom: 24rpx;
+}
+.date-item {
+  display: inline-block;
+  min-width: 130rpx;
+  padding: 16rpx 0;
+  margin-right: 16rpx;
+  text-align: center;
+  background: #fff;
+  border: 1rpx solid #e8ecf1;
+  border-radius: 18rpx;
+  box-shadow: 0 4rpx 16rpx rgba(15, 23, 42, 0.05);
+  vertical-align: top;
+}
+.date-item-on { background: #16a34a; border-color: #16a34a; }
+.date-item-on .date-d,
+.date-item-on .date-w { color: #fff; }
+.date-d { font-size: 26rpx; font-weight: 700; color: #0f172a; }
+.date-w { font-size: 20rpx; color: #94a3b8; margin-top: 2rpx; }
+
+/* ---------- 列表项 ---------- */
+.list-item {
+  padding: 26rpx 0;
+  border-bottom: 1rpx solid #f1f5f9;
+}
+.list-item:last-child { border-bottom: none; }
+
+/* ---------- 空状态 ---------- */
+.empty { text-align: center; padding: 90rpx 30rpx; }
+.empty-ico { font-size: 76rpx; display: block; margin-bottom: 16rpx; opacity: 0.55; }
+.empty-txt { font-size: 26rpx; color: #94a3b8; }
+
+/* ---------- 统计 ---------- */
+.stat-grid { display: flex; flex-wrap: wrap; margin: -10rpx; }
+.stat {
+  width: 50%;
+  padding: 10rpx;
+  box-sizing: border-box;
+}
+.stat-inner {
+  background: #f8fafc;
+  border-radius: 18rpx;
+  padding: 22rpx;
+}
+.stat-v { font-size: 38rpx; font-weight: 800; letter-spacing: -1rpx; }
+.stat-l { font-size: 22rpx; color: #64748b; margin-top: 4rpx; }
+
+/* ---------- 弹层 ---------- */
+.mask {
+  position: fixed;
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 900;
+  display: flex;
+  align-items: flex-end;
+}
+.sheet {
+  width: 100%;
+  background: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 32rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.sheet-h { font-size: 34rpx; font-weight: 800; margin-bottom: 6rpx; }
+.sheet-x {
+  font-size: 40rpx;
+  color: #94a3b8;
+  line-height: 1;
+  padding: 0 8rpx;
+}
+
+/* ---------- 金额 ---------- */
+.price { color: #15803d; font-weight: 800; font-size: 34rpx; }
+.price small { font-size: 22rpx; font-weight: 500; color: #94a3b8; }
+.sum-box {
+  background: #f8fafc;
+  border-radius: 18rpx;
+  padding: 22rpx;
+  margin-top: 26rpx;
+}
+
+/* ---------- 通行码 ---------- */
+.code-box {
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  border-radius: 24rpx;
+  padding: 34rpx 24rpx;
+  text-align: center;
+  margin: 24rpx 0;
+}
+.code-lbl { font-size: 22rpx; color: rgba(255, 255, 255, 0.65); }
+.code-num {
+  font-size: 76rpx;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 14rpx;
+  margin: 6rpx 0 2rpx 12rpx;
+}
+.code-plate { font-size: 28rpx; font-weight: 700; color: #4ade80; letter-spacing: 1rpx; }
+
+/* ---------- 顶部渐变头 ---------- */
+.hero {
+  background: linear-gradient(135deg, #15803d, #22c55e);
+  border-radius: 24rpx;
+  padding: 32rpx;
+  color: #fff;
+  margin-bottom: 24rpx;
+}
+.hero-title { font-size: 38rpx; font-weight: 800; letter-spacing: -0.5rpx; }
+.hero-sub { font-size: 22rpx; color: rgba(255, 255, 255, 0.82); margin-top: 6rpx; }

@@ -1,0 +1,53 @@
+<view class="page">
+
+  <view class="seg">
+    <view class="seg-item {{seg === 'live' ? 'seg-item-on' : ''}}" bindtap="onSeg" data-seg="live">进行中</view>
+    <view class="seg-item {{seg === 'all' ? 'seg-item-on' : ''}}" bindtap="onSeg" data-seg="all">全部订单</view>
+  </view>
+
+  <block wx:if="{{list.length > 0}}">
+    <view class="order-card" wx:for="{{list}}" wx:key="id">
+      <view class="row-between">
+        <view class="row">
+          <text class="order-spot">{{item.spotNo}}</text>
+          <text class="tag {{item.statusCls}} order-tag">{{item.statusLabel}}</text>
+        </view>
+        <text class="tiny muted">{{item.dateLabel}} {{item.timeText}}</text>
+      </view>
+
+      <view class="tiny muted mt8">{{item.building}} · 订单号 {{item.orderNo}}</view>
+
+      <view class="divider"></view>
+
+      <view class="kv"><text class="kv-k">车牌</text><text class="kv-v">{{item.plate}}</text></view>
+      <view class="kv"><text class="kv-k">金额</text><text class="kv-v">{{item.totalText}}</text></view>
+      <view class="kv" wx:if="{{item.overdue}}"><text class="kv-k red">超时费（1.5 倍）</text><text class="kv-v red">{{item.extraText}}</text></view>
+
+      <!-- 通行码 -->
+      <view class="code-box" wx:if="{{item.showCode}}">
+        <view class="code-lbl">{{item.statusLabel === '停放中' ? '停放中 · 出场自动结算' : '入场通行码 · 车牌自动识别'}}</view>
+        <view class="code-num">{{item.code}}</view>
+        <view class="code-plate">{{item.plate}}</view>
+      </view>
+
+      <view class="order-actions">
+        <view class="btn btn-sm btn-ghost" bindtap="copyCode" data-code="{{item.code}}" wx:if="{{item.showCode}}">复制通行码</view>
+        <view class="btn btn-sm btn-ghost" bindtap="onCancel" data-id="{{item.id}}" wx:if="{{item.statusLabel === '待支付'}}">取消订单</view>
+        <view class="btn btn-sm btn-blue" bindtap="onCheckin" data-id="{{item.id}}" wx:if="{{mockMode && item.canCheckin}}">模拟入场</view>
+        <view class="btn btn-sm btn-primary" bindtap="onCheckout" data-id="{{item.id}}" wx:if="{{mockMode && item.canCheckout}}">模拟出场结算</view>
+      </view>
+
+      <view class="tiny muted order-note" wx:if="{{mockMode && item.canCheckin}}">
+        演示模式：真实环境下由道闸识别车牌自动抬杆，无需点按钮
+      </view>
+    </view>
+  </block>
+
+  <view class="empty" wx:else>
+    <text class="empty-ico">📋</text>
+    <view class="empty-txt">还没有订单</view>
+    <view class="btn btn-primary mt24" style="width: 320rpx; margin: 24rpx auto 0;" bindtap="goFind">去找车位</view>
+  </view>
+
+  <view class="foot-tip" bindtap="onRefresh">下拉刷新 / 点此刷新</view>
+</view>

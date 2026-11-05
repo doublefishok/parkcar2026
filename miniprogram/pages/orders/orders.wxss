@@ -1,0 +1,35 @@
+.order-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(15, 23, 42, 0.06);
+}
+.order-spot {
+  font-size: 32rpx;
+  font-weight: 800;
+  letter-spacing: 1rpx;
+}
+.order-tag { margin-left: 12rpx; }
+
+.order-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 20rpx;
+}
+.order-actions .btn { margin-left: 16rpx; margin-top: 12rpx; }
+
+.order-note {
+  margin-top: 14rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx dashed #eef2f6;
+  line-height: 1.6;
+}
+
+.foot-tip {
+  text-align: center;
+  font-size: 21rpx;
+  color: #b6c0cc;
+  padding: 20rpx 0 10rpx;
+}

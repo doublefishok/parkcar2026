@@ -1,0 +1,100 @@
+<view class="page detail-page" wx:if="{{slot}}">
+
+  <!-- 车位信息 -->
+  <view class="card">
+    <view class="row-between">
+      <view>
+        <view class="row">
+          <text class="slot-no">{{slot.spotNo}}</text>
+          <text class="tag {{slot.stateCls}} slot-tag">{{slot.stateText}}</text>
+        </view>
+        <view class="tiny muted mt8">{{slot.building}} · {{spot.ownerName}} 的车位</view>
+      </view>
+      <view class="price">{{slot.priceText}}</view>
+    </view>
+
+    <view class="divider"></view>
+
+    <view class="kv"><text class="kv-k">使用时段</text><text class="kv-v">{{slot.dateLabel}} {{slot.timeText}}</text></view>
+    <view class="kv"><text class="kv-k">停放时长</text><text class="kv-v">{{slot.hoursText}}</text></view>
+    <view class="kv"><text class="kv-k">计价方式</text><text class="kv-v">{{slot.unitText}}</text></view>
+    <view class="kv"><text class="kv-k">放行方式</text><text class="kv-v">车牌自动识别 · 通行码备用</text></view>
+  </view>
+
+  <!-- 预约信息 -->
+  <view class="card">
+    <view class="sec-title" style="margin-bottom: 4rpx;">填写预约信息</view>
+    <view class="tiny muted">用于道闸放行与联系，仅车位主与物业可见</view>
+
+    <view class="field">
+      <view class="field-label">您的称呼</view>
+      <input class="field-input" placeholder="如：刘先生" placeholder-class="field-input-placeholder"
+             value="{{name}}" data-key="name" bindinput="onInput" maxlength="12" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">车牌号</view>
+      <input class="field-input" placeholder="如：沪E·6R88" placeholder-class="field-input-placeholder"
+             value="{{plate}}" data-key="plate" bindinput="onInput" maxlength="10" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">手机号（选填）</view>
+      <input class="field-input" type="number" placeholder="用于接收通行凭证" placeholder-class="field-input-placeholder"
+             value="{{phone}}" data-key="phone" bindinput="onInput" maxlength="11" />
+    </view>
+  </view>
+
+  <!-- 费用明细 -->
+  <view class="card">
+    <view class="sec-title" style="margin-bottom: 10rpx;">费用明细</view>
+    <view class="kv"><text class="kv-k">{{slot.hoursText}} × {{slot.unitText}}</text><text class="kv-v">按日封顶计算</text></view>
+    <view class="divider"></view>
+    <view class="row-between">
+      <text class="bold">应付金额</text>
+      <text class="price">{{slot.priceText}}</text>
+    </view>
+  </view>
+
+  <view class="tips">
+    <view class="tips-line">· 支付后车牌自动加入道闸白名单，进出无需登记</view>
+    <view class="tips-line">· 预约开始前 30 分钟生效，{{slot.to}} 失效</view>
+    <view class="tips-line">· 超时部分按 1.5 倍时价计费，出场时自动结算</view>
+  </view>
+</view>
+
+<!-- 底部支付栏 -->
+<view class="pay-bar" wx:if="{{slot}}">
+  <view class="flex1">
+    <view class="row">
+      <text class="pay-label">合计</text>
+      <text class="pay-amount">{{slot.priceText}}</text>
+    </view>
+    <view class="tiny muted">含平台服务费与物业分成</view>
+  </view>
+  <view class="btn btn-primary pay-btn {{(!slot.available || paying) ? 'btn-disabled' : ''}}" bindtap="onPay">
+    {{slot.available ? (paying ? '支付中…' : '立即支付') : '不可预约'}}
+  </view>
+</view>
+
+<!-- 支付成功 -->
+<view class="mask" wx:if="{{showSuccess}}">
+  <view class="sheet">
+    <view class="sheet-h center">预约成功</view>
+    <view class="tiny muted center">车牌已下发道闸白名单，可直接进场</view>
+
+    <view class="code-box">
+      <view class="code-lbl">通行码 · 道闸识别车牌自动放行</view>
+      <view class="code-num">{{successOrder.code}}</view>
+      <view class="code-plate">{{successOrder.plate}}</view>
+    </view>
+
+    <view class="card" style="margin: 0; background: #f8fafc; box-shadow: none;">
+      <view class="kv"><text class="kv-k">车位</text><text class="kv-v">{{successOrder.spotNo}}（{{successOrder.building}}）</text></view>
+      <view class="kv"><text class="kv-k">时段</text><text class="kv-v">{{successOrder.dateLabel}} {{successOrder.timeText}}</text></view>
+      <view class="kv"><text class="kv-k">金额</text><text class="kv-v">{{successOrder.baseText}}</text></view>
+    </view>
+
+    <view class="btn btn-primary btn-block mt24" bindtap="closeSuccess">查看订单</view>
+  </view>
+</view>

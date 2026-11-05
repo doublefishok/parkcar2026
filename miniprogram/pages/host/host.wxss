@@ -1,0 +1,68 @@
+.spot-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 20rpx;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 24rpx;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.spot-title { font-size: 34rpx; font-weight: 800; letter-spacing: 1rpx; }
+.spot-tag { margin-left: 12rpx; }
+
+.price-box { text-align: center; flex: 1; }
+.price-unit { font-size: 22rpx; font-weight: 500; color: #94a3b8; margin-left: 4rpx; }
+
+.quick {
+  display: flex;
+  align-items: center;
+  background: #f0fdf4;
+  border: 1rpx dashed #86efac;
+  border-radius: 18rpx;
+  padding: 24rpx;
+  margin-top: 20rpx;
+}
+.quick-hover { background: #dcfce7; }
+.quick-ico { font-size: 44rpx; margin-right: 20rpx; }
+.quick-arrow { font-size: 40rpx; color: #86efac; }
+
+.slot-row {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 4rpx 20rpx rgba(15, 23, 42, 0.06);
+}
+
+.hero-money {
+  font-size: 64rpx;
+  font-weight: 800;
+  letter-spacing: -2rpx;
+  margin: 8rpx 0 4rpx;
+}
+
+.tips-box {
+  margin-top: 24rpx;
+  background: #fffbeb;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  font-size: 22rpx;
+  color: #b45309;
+  line-height: 1.7;
+}
+
+.order-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(15, 23, 42, 0.06);
+}
+.order-spot { font-size: 28rpx; font-weight: 700; }
+.order-tag { margin-left: 12rpx; }

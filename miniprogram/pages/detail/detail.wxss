@@ -1,0 +1,43 @@
+.detail-page { padding-bottom: 200rpx; }
+
+.slot-no {
+  font-size: 36rpx;
+  font-weight: 800;
+  letter-spacing: 1rpx;
+}
+.slot-tag { margin-left: 12rpx; }
+
+.tips {
+  padding: 4rpx 8rpx 20rpx;
+}
+.tips-line {
+  font-size: 22rpx;
+  color: #94a3b8;
+  line-height: 1.9;
+}
+
+.pay-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  border-top: 1rpx solid #eef2f6;
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  box-shadow: 0 -4rpx 20rpx rgba(15, 23, 42, 0.06);
+  z-index: 50;
+}
+.pay-label { font-size: 24rpx; color: #64748b; margin-right: 10rpx; }
+.pay-amount {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #15803d;
+  letter-spacing: -1rpx;
+}
+.pay-btn {
+  width: 280rpx;
+  height: 84rpx;
+  flex: 0 0 auto;
+}

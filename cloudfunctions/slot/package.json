@@ -1,0 +1,9 @@
+{
+  "name": "slot",
+  "version": "1.0.0",
+  "description": "空闲时段发布",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -1,0 +1,156 @@
+<view class="page">
+
+  <view class="seg">
+    <view class="seg-item {{tab === 'access' ? 'seg-item-on' : ''}}" bindtap="onTab" data-tab="access">放行名单</view>
+    <view class="seg-item {{tab === 'audit' ? 'seg-item-on' : ''}}" bindtap="onTab" data-tab="audit">车位审核</view>
+    <view class="seg-item {{tab === 'stats' ? 'seg-item-on' : ''}}" bindtap="onTab" data-tab="stats">经营看板</view>
+  </view>
+
+  <!-- ================= 放行名单 ================= -->
+  <block wx:if="{{tab === 'access'}}">
+    <view class="card">
+      <view class="row-between">
+        <view>
+          <view class="sec-title">今日放行名单</view>
+          <view class="tiny muted mt8">共 {{list.length}} 辆 · 道闸白名单已同步</view>
+        </view>
+        <view class="btn btn-sm btn-ghost" bindtap="copyWhitelist">复制名单</view>
+      </view>
+    </view>
+
+    <view class="gate-card">
+      <view class="sec-title" style="margin-bottom: 12rpx;">道闸识别核验</view>
+      <view class="gate-in">
+        <input class="gate-input" placeholder="输入车牌，如 沪A·2K78" placeholder-class="field-input-placeholder"
+               value="{{verifyPlate}}" bindinput="onPlateInput" bindconfirm="onVerify" confirm-type="search" />
+        <view class="btn btn-blue btn-sm gate-btn" bindtap="onVerify">识别</view>
+      </view>
+
+      <view class="gate-res {{verifyResult.allow ? 'ok' : 'no'}}" wx:if="{{verifyResult}}">
+        <view class="gate-res-title">{{verifyResult.allow ? '✅ 抬杆放行' : '⛔ 拒绝放行'}}</view>
+        <view class="gate-res-msg">{{verifyResult.msg}}</view>
+      </view>
+    </view>
+
+    <block wx:if="{{list.length > 0}}">
+      <view class="pass-card" wx:for="{{list}}" wx:key="id">
+        <view class="row-between">
+          <text class="pass-plate">{{item.plate}}</text>
+          <text class="tag {{item.statusCls}}">{{item.statusLabel}}</text>
+        </view>
+        <view class="divider"></view>
+        <view class="kv"><text class="kv-k">车位</text><text class="kv-v">{{item.spotNo}}（{{item.building}}）</text></view>
+        <view class="kv"><text class="kv-k">放行时段</text><text class="kv-v">{{item.dateLabel}} {{item.timeText}}</text></view>
+        <view class="kv">
+          <text class="kv-k">通行码</text>
+          <text class="kv-v code-text" bindtap="copyCode" data-code="{{item.code}}">{{item.code}} 复制</text>
+        </view>
+        <view class="kv" wx:if="{{item.overdue}}"><text class="kv-k red">超时</text><text class="kv-v red">已超时，出场按 1.5 倍计费</text></view>
+      </view>
+    </block>
+    <view class="empty" wx:else>
+      <text class="empty-ico">📄</text>
+      <view class="empty-txt">今日暂无放行车辆</view>
+    </view>
+
+    <view class="card">
+      <view class="sec-title" style="margin-bottom: 10rpx;">放行规则</view>
+      <view class="rule">· 生效：预约开始前 30 分钟 · 失效：结束时刻</view>
+      <view class="rule">· 车牌匹配即自动抬杆，无需人工核对</view>
+      <view class="rule">· 超时出场按 1.5 倍时价自动补扣</view>
+      <view class="rule">· 未预约车辆一律拒绝，走访客登记</view>
+    </view>
+  </block>
+
+  <!-- ================= 车位审核 ================= -->
+  <block wx:if="{{tab === 'audit'}}">
+    <view class="sec">
+      <view class="sec-title">待审核车位</view>
+      <view class="sec-hint">{{pending.length}} 个</view>
+    </view>
+
+    <block wx:if="{{pending.length > 0}}">
+      <view class="card" wx:for="{{pending}}" wx:key="_id">
+        <view class="row-between">
+          <view>
+            <view class="row">
+              <text class="bold" style="font-size: 32rpx;">{{item.spotNo}}</text>
+              <text class="tag tag-amber" style="margin-left: 12rpx;">待审核</text>
+            </view>
+            <view class="tiny muted mt8">{{item.building}} · {{item.ownerName}} · {{item.ownerPhone}}</view>
+            <view class="tiny muted">申请价 ¥{{item.pricePerHour}}/时 · 日封顶 ¥{{item.dayCap}}</view>
+            <view class="tiny muted">车位性质：{{item.certType}}</view>
+          </view>
+        </view>
+        <view class="row mt24" style="justify-content: flex-end;">
+          <view class="btn btn-sm btn-ghost" bindtap="onReject" data-id="{{item._id}}">驳回</view>
+          <view class="btn btn-sm btn-primary" style="margin-left: 16rpx;" bindtap="onApprove" data-id="{{item._id}}">通过认证</view>
+        </view>
+      </view>
+    </block>
+    <view class="empty" wx:else>
+      <text class="empty-ico">✅</text>
+      <view class="empty-txt">没有待审核车位</view>
+    </view>
+
+    <view class="card">
+      <view class="sec-title" style="margin-bottom: 10rpx;">审核要点</view>
+      <view class="rule">· 核对产权证 / 租赁合同与车位号是否一致</view>
+      <view class="rule">· 确认车位为产权车位或允许转租的月租车位</view>
+      <view class="rule">· 人防车位不得用于盈利性转租，一律驳回</view>
+      <view class="rule">· 登记业主车牌，与道闸系统比对</view>
+    </view>
+  </block>
+
+  <!-- ================= 经营看板 ================= -->
+  <block wx:if="{{tab === 'stats'}}">
+    <view class="hero">
+      <view class="hero-sub">今日 GMV</view>
+      <view class="hero-money">{{stats.gmvText || '¥0'}}</view>
+      <view class="hero-row">
+        <view class="hero-stat">
+          <view class="hero-num">{{stats.todayCount || 0}}</view>
+          <view class="hero-lbl">今日订单</view>
+        </view>
+        <view class="hero-stat">
+          <view class="hero-num">{{stats.inPark || 0}}</view>
+          <view class="hero-lbl">当前在场</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="sec-title" style="margin-bottom: 16rpx;">今日分账</view>
+      <view class="kv"><text class="kv-k">平台服务费 10%</text><text class="kv-v">{{stats.platformText || '¥0'}}</text></view>
+      <view class="kv"><text class="kv-k">物业分成 15%</text><text class="kv-v blue">{{stats.propertyText || '¥0'}}</text></view>
+      <view class="kv"><text class="kv-k">业主收入 75%</text><text class="kv-v green">{{stats.ownerText || '¥0'}}</text></view>
+      <view class="divider"></view>
+      <view class="kv"><text class="kv-k bold">合计</text><text class="kv-v bold">{{stats.gmvText || '¥0'}}</text></view>
+    </view>
+
+    <view class="card">
+      <view class="sec-title" style="margin-bottom: 16rpx;">运营数据</view>
+      <view class="stat-grid">
+        <view class="stat"><view class="stat-inner">
+          <view class="stat-v">{{stats.rate || 0}}%</view>
+          <view class="stat-l">今日出租率</view>
+        </view></view>
+        <view class="stat"><view class="stat-inner">
+          <view class="stat-v">{{stats.approvedSpots || 0}}</view>
+          <view class="stat-l">已认证车位</view>
+        </view></view>
+        <view class="stat"><view class="stat-inner">
+          <view class="stat-v">{{stats.totalOrders || 0}}</view>
+          <view class="stat-l">累计订单</view>
+        </view></view>
+        <view class="stat"><view class="stat-inner">
+          <view class="stat-v">{{stats.totalGmvText || '¥0'}}</view>
+          <view class="stat-l">累计 GMV</view>
+        </view></view>
+      </view>
+      <view class="tiny muted mt16">全小区共 {{stats.totalSpots || 386}} 个车位</view>
+    </view>
+  </block>
+
+  <view class="foot-tip" bindtap="onRefresh">点此刷新数据</view>
+</view>
