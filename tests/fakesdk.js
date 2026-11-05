@@ -60,10 +60,11 @@ Collection.prototype.doc = function (id) {
 };
 
 function Query(name, cond) {
-  this.name = name; this.cond = cond || {}; this._limit = 100; this._order = null;
+  this.name = name; this.cond = cond || {}; this._limit = 100; this._skip = 0; this._order = null;
 }
 Query.prototype.where = function (c) { const q = new Query(this.name, c); q._limit = this._limit; return q; };
 Query.prototype.limit = function (n) { this._limit = n; return this; };
+Query.prototype.skip = function (n) { this._skip = n; return this; };
 Query.prototype.orderBy = function (f, d) { this._order = [f, d || 'asc']; return this; };
 Query.prototype._rows = function () {
   if (!store[this.name]) store[this.name] = [];
@@ -72,7 +73,7 @@ Query.prototype._rows = function () {
     const [f, d] = this._order;
     rows = rows.slice().sort((a, b) => (a[f] > b[f] ? 1 : a[f] < b[f] ? -1 : 0) * (d === 'desc' ? -1 : 1));
   }
-  return rows.slice(0, this._limit).map(r => JSON.parse(JSON.stringify(r)));
+  return rows.slice(this._skip, this._skip + this._limit).map(r => JSON.parse(JSON.stringify(r)));
 };
 Query.prototype.get = async function () { return { data: this._rows() }; };
 Query.prototype.count = async function () { return { total: store[this.name].filter(d => matches(d, this.cond)).length }; };

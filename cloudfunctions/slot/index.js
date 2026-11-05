@@ -10,12 +10,6 @@ async function mySpot(OPENID) {
   return r.data[0] || null;
 }
 
-async function assertAdmin(OPENID) {
-  const r = await db.collection('users').where({ _openid: OPENID }).limit(1).get();
-  const u = r.data[0];
-  return !!(u && (u.role === 'property' || u.isAdmin));
-}
-
 async function hasOverlap(spotId, date, from, to) {
   const r = await db.collection('slots')
     .where({ spotId: spotId, date: date, status: _.neq('cancelled') })
@@ -61,11 +55,15 @@ exports.main = async function (event) {
       if (!spot) return common.fail('请先完成车位备案');
       if (spot.status !== 'approved') return common.fail('车位尚未通过物业审核');
 
-      const now = new Date();
-      const delta = (6 - now.getDay() + 7) % 7 || 7;
-      const sat = new Date(); sat.setDate(sat.getDate() + delta);
-      const sun = new Date(sat); sun.setDate(sun.getDate() + 1);
-      const fmt = function (d) { return d.getFullYear() + '-' + common.pad(d.getMonth() + 1) + '-' + common.pad(d.getDate()); };
+      // 云函数运行在 UTC，必须显式用北京时间的「今天 / 星期几」
+      const cn = common.nowCN();
+      const y = cn.getUTCFullYear(), mo = cn.getUTCMonth(), d = cn.getUTCDate();
+      const delta = (6 - cn.getUTCDay() + 7) % 7 || 7;
+      const sat = new Date(Date.UTC(y, mo, d + delta));
+      const sun = new Date(Date.UTC(y, mo, d + delta + 1));
+      const fmt = function (dt) {
+        return dt.getUTCFullYear() + '-' + common.pad(dt.getUTCMonth() + 1) + '-' + common.pad(dt.getUTCDate());
+      };
 
       const created = [];
       for (const date of [fmt(sat), fmt(sun)]) {

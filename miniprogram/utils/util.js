@@ -1,30 +1,38 @@
 /**
  * 通用工具 & 视图构建
+ * ------------------------------------------------------------
+ * 时间计算统一按东八区显式处理，不依赖设备/运行时时区，
+ * 保证与云函数侧（shared/cloudfn-common.js）结果完全一致。
  */
+
+const TZ_OFFSET = 8 * 3600 * 1000;
+const OVERDUE_CAP_RATIO = 2;
 
 function pad(n) {
   return n < 10 ? '0' + n : '' + n;
 }
 
-/** 返回 YYYY-MM-DD（相对今天偏移 offset 天） */
+/** 当前"北京墙钟"时间（用 getUTCxxx 读取） */
+function nowCN() { return new Date(Date.now() + TZ_OFFSET); }
+
+/** 返回 YYYY-MM-DD（北京时间，相对今天偏移 offset 天） */
 function dateStr(offset) {
-  const d = new Date();
-  d.setDate(d.getDate() + (offset || 0));
-  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const d = nowCN();
+  d.setUTCDate(d.getUTCDate() + (offset || 0));
+  return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
 }
 
-/** 今天 / 明天 / 后天 / 11-12 周三 */
+/** 今天 / 明天 / 后天 / 11-12 */
 function dayLabel(str) {
-  const t = dateStr(0), t1 = dateStr(1), t2 = dateStr(2);
-  if (str === t) return '今天';
-  if (str === t1) return '明天';
-  if (str === t2) return '后天';
-  return str.slice(5).replace('-', '/');
+  if (str === dateStr(0)) return '今天';
+  if (str === dateStr(1)) return '明天';
+  if (str === dateStr(2)) return '后天';
+  return String(str).slice(5).replace('-', '/');
 }
 
 function weekdayCn(str) {
-  const w = new Date(str + 'T00:00:00').getDay();
-  return '周' + '日一二三四五六'[w];
+  const d = String(str).split('-').map(Number);
+  return '周' + '日一二三四五六'[new Date(Date.UTC(d[0], d[1] - 1, d[2])).getUTCDay()];
 }
 
 /** "08:30" → 510 */
@@ -46,9 +54,11 @@ function fmtHours(h) {
   return String(Math.round(h * 10) / 10);
 }
 
-/** 某日期某时刻的时间戳 */
+/** 北京时间「某日某时刻」→ 真实时间戳 */
 function slotTs(date, hm) {
-  return new Date(date.replace(/-/g, '/') + ' ' + hm + ':00').getTime();
+  const d = String(date).split('-').map(Number);
+  const t = String(hm).split(':').map(Number);
+  return Date.UTC(d[0], d[1] - 1, d[2], (t[0] || 0), (t[1] || 0)) - TZ_OFFSET;
 }
 
 function money(n) {
@@ -94,25 +104,32 @@ function orderStatusMeta(order) {
   return map[order.status] || { label: order.status, cls: 'tag-gray' };
 }
 
-/** 超时费 = 超出小时数 × 时价 × 1.5 */
+/**
+ * 超时费 = 超出小时 × 时价 × 1.5，且不超过 2 倍日封顶
+ * 取「实时计算值」与「已落库值」的较大者（定时任务会累计落库）
+ */
 function extraFeeOf(order, spot) {
-  if (order.status !== 'checked_in') return 0;
-  const now = Date.now();
+  const stored = order.extraAmount || 0;
+  if (order.status !== 'checked_in') return stored;
   const end = slotTs(order.date, order.to);
-  if (now <= end) return 0;
+  const now = Date.now();
+  if (now <= end) return stored;
+
   const overH = Math.ceil((now - end) / 3600000);
-  return Math.round(overH * spot.pricePerHour * 1.5);
+  let live = Math.round(overH * spot.pricePerHour * 1.5);
+  const cap = Math.round((spot.dayCap || 0) * OVERDUE_CAP_RATIO);
+  if (cap > 0 && live > cap) live = cap;
+  return Math.max(live, stored);
 }
 
 /** 时段卡片视图 */
 function buildSlotView(slot, spot) {
   const hours = hoursBetween(slot.from, slot.to);
   const price = calcPrice(spot, slot);
-  const start = slotTs(slot.date, slot.from);
-  const end = slotTs(slot.date, slot.to);
   const now = Date.now();
+  const end = slotTs(slot.date, slot.to);
   let state = slot.status;
-  if (slot.status === 'available' && now > end) state = 'expired';
+  if (state === 'available' && now > end) state = 'expired';
   return {
     id: slot._id,
     spotId: spot._id,
@@ -141,7 +158,7 @@ function buildOrderView(order, slot, spot, split) {
   const extra = extraFeeOf(order, spot);
   const isLive = order.status === 'paid' || order.status === 'checked_in';
   const overdue = order.status === 'checked_in' && Date.now() > slotTs(order.date, order.to);
-  const ownerIncome = Math.round((order.baseAmount + (order.extraAmount || 0)) * (split && split.owner != null ? split.owner : 0.75));
+  const ownerIncome = Math.round((order.baseAmount + extra) * (split && split.owner != null ? split.owner : 0.75));
   return {
     id: order._id,
     orderNo: order.orderNo,
@@ -155,7 +172,7 @@ function buildOrderView(order, slot, spot, split) {
     baseText: money(order.baseAmount),
     extra: extra,
     extraText: money(extra),
-    totalText: money(order.baseAmount + (order.extraAmount || 0)),
+    totalText: money(order.baseAmount + extra),
     income: ownerIncome,
     incomeText: money(ownerIncome),
     statusLabel: overdue ? '超时中' : meta.label,
@@ -166,7 +183,6 @@ function buildOrderView(order, slot, spot, split) {
     showCode: order.status === 'paid' || order.status === 'checked_in',
     canCheckin: order.status === 'paid',
     canCheckout: order.status === 'checked_in',
-    // 业主视角
     isMine: !!order.__isMine
   };
 }
@@ -180,6 +196,9 @@ function sleep(ms) {
 }
 
 module.exports = {
+  TZ_OFFSET: TZ_OFFSET,
+  OVERDUE_CAP_RATIO: OVERDUE_CAP_RATIO,
+  nowCN: nowCN,
   pad: pad,
   dateStr: dateStr,
   dayLabel: dayLabel,

@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>邻里车位 · 小程序界面预览</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0; display: flex; min-height: 100vh; background: #0b1220; color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+}
+.side { width: 232px; flex: 0 0 232px; padding: 26px 14px; background: #101a2b; height: 100vh; position: sticky; top: 0; overflow-y: auto; }
+.side h1 { font-size: 15px; margin: 0 0 6px; letter-spacing: .3px; }
+.side p { font-size: 11px; color: #64748b; margin: 0 0 6px; line-height: 1.75; }
+.side-group { font-size: 10px; color: #475569; letter-spacing: 1.2px; margin: 18px 0 6px; }
+.side-item { display: block; width: 100%; text-align: left; background: transparent; border: 0; color: #94a3b8;
+  font-size: 12.5px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-family: inherit; transition: .12s; }
+.side-item:hover { background: #1e293b; color: #e2e8f0; }
+.side-item.on { background: #16a34a; color: #fff; font-weight: 700; }
+.stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 20px; gap: 16px; }
+.phone { width: 390px; height: 844px; border-radius: 48px; background: #05070c; padding: 10px;
+  box-shadow: 0 30px 90px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06); flex: 0 0 auto; }
+.phone-screen { width: 100%; height: 100%; border-radius: 39px; overflow: hidden; background: #f4f6f8;
+  display: flex; flex-direction: column; position: relative; }
+.statusbar { height: 44px; background: #16a34a; color: #fff; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 28px; font-size: 13px; font-weight: 600; flex: 0 0 auto; }
+.navbar { height: 44px; background: #16a34a; color: #fff; display: flex; align-items: center;
+  padding: 0 14px; font-size: 16px; font-weight: 600; flex: 0 0 auto; position: relative; }
+.navbar .t { position: absolute; left: 0; right: 0; text-align: center; pointer-events: none; }
+.navbar .b { font-size: 22px; width: 22px; z-index: 1; opacity: .95; }
+.navbar .r { margin-left: auto; font-size: 15px; opacity: .8; letter-spacing: 2px; z-index: 1; }
+.phone-body { flex: 1; overflow-y: auto; position: relative; }
+.phone-body::-webkit-scrollbar { width: 0; }
+.phone-body .page { min-height: 100%; }
+.phone-body .mask { position: absolute; }
+.phone-body .sheet { max-height: 74%; }
+.phone-body .pay-bar { position: sticky; bottom: 0; }
+.hint { font-size: 11.5px; color: #64748b; max-width: 430px; text-align: center; line-height: 1.75; }
+.screen { display: none; position: relative; min-height: 100%; }
+.screen.on { display: block; }
+</style>
+</head>
+<body>
+
+<aside class="side">
+  <h1>邻里车位 · 界面预览</h1>
+  <p>样式由小程序 <code>app.wxss</code> + 各页 <code>wxss</code> 自动转换生成（rpx → px），结构对照真实 WXML。</p>
+
+  <div class="side-group">通用</div>
+  <button class="side-item on" data-id="index">首页 · 身份切换</button>
+  <button class="side-item" data-id="profile">我的</button>
+
+  <div class="side-group">租客端</div>
+  <button class="side-item" data-id="find">找车位</button>
+  <button class="side-item" data-id="detail">确认预约</button>
+  <button class="side-item" data-id="success">支付成功 · 通行码</button>
+  <button class="side-item" data-id="orders">我的订单</button>
+
+  <div class="side-group">业主端</div>
+  <button class="side-item" data-id="host-spot">我的车位</button>
+  <button class="side-item" data-id="host-publish">发布时段</button>
+  <button class="side-item" data-id="host-income">收益</button>
+
+  <div class="side-group">物业端</div>
+  <button class="side-item" data-id="prop-access">放行名单</button>
+  <button class="side-item" data-id="prop-audit">车位审核</button>
+  <button class="side-item" data-id="prop-stats">经营看板</button>
+</aside>
+
+<div class="stage">
+  <div class="phone">
+    <div class="phone-screen">
+      <div class="statusbar"><span>9:41</span><span>ᯤ 🔋</span></div>
+      <div class="navbar"><span class="b">‹</span><span class="t" id="navTitle">邻里车位</span><span class="r">···</span></div>
+      <div class="phone-body" id="body">
+
+        <!-- ============ 首页 ============ -->
+        <section class="screen pg-index on" data-id="index" data-title="邻里车位">
+          <div class="page">
+            <div class="hero">
+              <div class="row-between">
+                <div class="flex1">
+                  <div class="hero-title">阳光花园</div>
+                  <div class="hero-sub">浦东新区阳光路 128 号</div>
+                  <div class="hero-sub">468 户 · 386 个车位 · 道闸 捷顺 JSD-3B2</div>
+                </div>
+                <div class="hero-avatar">张</div>
+              </div>
+              <div class="hero-row">
+                <div class="hero-stat"><div class="hero-num">2</div><div class="hero-lbl">近 3 天可租车位</div></div>
+                <div class="hero-stat"><div class="hero-num">1</div><div class="hero-lbl">我的进行中订单</div></div>
+              </div>
+            </div>
+
+            <div class="sec"><div class="sec-title">选择你的身份</div><div class="sec-hint">切换后进入对应工作台</div></div>
+            <div class="role-cards">
+              <div class="role-card on"><div class="role-ico">🚗</div><div class="role-name">租客</div><div class="role-desc">停别人闲置车位</div></div>
+              <div class="role-card"><div class="role-ico">🅿️</div><div class="role-name">业主</div><div class="role-desc">出租自家空车位</div></div>
+              <div class="role-card"><div class="role-ico">🏢</div><div class="role-name">物业</div><div class="role-desc">审核 / 放行 / 分账</div></div>
+            </div>
+
+            <div class="card">
+              <div class="entry"><div class="entry-ico ico-green">🔍</div><div class="flex1"><div class="entry-title">我要停车</div><div class="entry-desc">选时段 · 看车位 · 在线支付</div></div><div class="entry-arrow">›</div></div>
+              <div class="entry"><div class="entry-ico ico-blue">🅿️</div><div class="flex1"><div class="entry-title">出租我的车位</div><div class="entry-desc">已认证 B1-082，一键发布空闲时段</div></div><div class="entry-arrow">›</div></div>
+              <div class="entry"><div class="entry-ico ico-amber">📋</div><div class="flex1"><div class="entry-title">我的订单</div><div class="entry-desc">查看通行码 · 支付 · 超时费用</div></div><div class="entry-arrow">›</div></div>
+              <div class="entry"><div class="entry-ico ico-gray">🏢</div><div class="flex1"><div class="entry-title">物业后台</div><div class="entry-desc">放行名单 · 车位审核 · 经营看板</div></div><div class="entry-arrow">›</div></div>
+            </div>
+
+            <div class="foot-tip">邻里车位 · 社区闲置车位分时共享</div>
+          </div>
+        </section>
+
+        <!-- ============ 找车位 ============ -->
+        <section class="screen pg-find" data-id="find" data-title="找车位">
+          <div class="page">
+            <div class="date-scroll">
+              <div class="date-bar">
+                <div class="date-item"><div class="date-d">今天</div><div class="date-w">周四</div></div>
+                <div class="date-item date-item-on"><div class="date-d">明天</div><div class="date-w">周五</div></div>
+                <div class="date-item"><div class="date-d">后天</div><div class="date-w">周六</div></div>
+                <div class="date-item"><div class="date-d">11/09</div><div class="date-w">周日</div></div>
+              </div>
+            </div>
+
+            <div class="sec"><div class="sec-title">可租车位</div><div class="sec-hint">2 个可租 / 共 3 个发布</div></div>
+
+            <div class="slot-card">
+              <div class="row-between">
+                <div class="flex1">
+                  <div class="row"><span class="slot-no">B1-082</span><span class="tag tag-gray slot-tag">已租出</span></div>
+                  <div class="tiny muted mt8">7栋 · 张伟 的车位</div>
+                  <div class="tiny muted">08:00–20:00 · 共 12 小时</div>
+                </div>
+                <div class="slot-right"><div class="price">¥60</div><div class="slot-arrow">›</div></div>
+              </div>
+              <div class="slot-foot"><span>¥12/时 · 日封顶 ¥60</span><span class="slot-verified">✓ 物业已核验产权</span></div>
+            </div>
+
+            <div class="slot-card">
+              <div class="row-between">
+                <div class="flex1">
+                  <div class="row"><span class="slot-no">B1-201</span><span class="tag tag-green slot-tag">可租</span></div>
+                  <div class="tiny muted mt8">5栋 · 赵敏 的车位</div>
+                  <div class="tiny muted">08:00–22:00 · 共 14 小时</div>
+                </div>
+                <div class="slot-right"><div class="price">¥40</div><div class="slot-arrow">›</div></div>
+              </div>
+              <div class="slot-foot"><span>¥8/时 · 日封顶 ¥40</span><span class="slot-verified">✓ 物业已核验产权</span></div>
+            </div>
+
+            <div class="slot-card">
+              <div class="row-between">
+                <div class="flex1">
+                  <div class="row"><span class="slot-no">B2-115</span><span class="tag tag-green slot-tag">可租</span></div>
+                  <div class="tiny muted mt8">3栋 · 李娜 的车位</div>
+                  <div class="tiny muted">09:00–18:00 · 共 9 小时</div>
+                </div>
+                <div class="slot-right"><div class="price">¥50</div><div class="slot-arrow">›</div></div>
+              </div>
+              <div class="slot-foot"><span>¥10/时 · 日封顶 ¥50</span><span class="slot-verified">✓ 物业已核验产权</span></div>
+            </div>
+
+            <div class="notice mt24">
+              <div class="notice-title">停放说明</div>
+              <div class="notice-line">· 车位均通过物业产权核验，人防车位不参与出租</div>
+              <div class="notice-line">· 支付后车牌自动下发道闸白名单，无需联系业主</div>
+              <div class="notice-line">· 预约开始前 30 分钟生效，结束时刻失效</div>
+              <div class="notice-line">· 超时按 1.5 倍时价自动计费，出场结算</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 确认预约 ============ -->
+        <section class="screen pg-detail" data-id="detail" data-title="确认预约">
+          <div class="page detail-page">
+            <div class="card">
+              <div class="row-between">
+                <div>
+                  <div class="row"><span class="slot-no">B2-115</span><span class="tag tag-green slot-tag">可租</span></div>
+                  <div class="tiny muted mt8">3栋 · 李娜 的车位</div>
+                </div>
+                <div class="price">¥50</div>
+              </div>
+              <div class="divider"></div>
+              <div class="kv"><span class="kv-k">使用时段</span><span class="kv-v">明天 09:00–18:00</span></div>
+              <div class="kv"><span class="kv-k">停放时长</span><span class="kv-v">9 小时</span></div>
+              <div class="kv"><span class="kv-k">计价方式</span><span class="kv-v">¥10/时 · 日封顶 ¥50</span></div>
+              <div class="kv"><span class="kv-k">放行方式</span><span class="kv-v">车牌自动识别 · 通行码备用</span></div>
+            </div>
+
+            <div class="card">
+              <div class="sec-title" style="margin-bottom:4px;">填写预约信息</div>
+              <div class="tiny muted">用于道闸放行与联系，仅车位主与物业可见</div>
+              <div class="field"><div class="field-label">您的称呼</div><input class="field-input" value="张伟"></div>
+              <div class="field"><div class="field-label">车牌号</div><input class="field-input" value="沪A·2K78"></div>
+              <div class="field"><div class="field-label">手机号（选填）</div><input class="field-input" value="13866216621"></div>
+            </div>
+
+            <div class="card">
+              <div class="sec-title" style="margin-bottom:10px;">费用明细</div>
+              <div class="kv"><span class="kv-k">9 小时 × ¥10/时 · 日封顶 ¥50</span><span class="kv-v">按日封顶计算</span></div>
+              <div class="divider"></div>
+              <div class="row-between"><span class="bold">应付金额</span><span class="price">¥50</span></div>
+            </div>
+
+            <div class="tips">
+              <div class="tips-line">· 支付后车牌自动加入道闸白名单，进出无需登记</div>
+              <div class="tips-line">· 预约开始前 30 分钟生效，18:00 失效</div>
+              <div class="tips-line">· 超时部分按 1.5 倍时价计费，出场时自动结算</div>
+            </div>
+          </div>
+
+          <div class="pay-bar">
+            <div class="flex1">
+              <div class="row"><span class="pay-label">合计</span><span class="pay-amount">¥50</span></div>
+              <div class="tiny muted">含平台服务费与物业分成</div>
+            </div>
+            <div class="btn btn-primary pay-btn">立即支付</div>
+          </div>
+        </section>
+
+        <!-- ============ 支付成功 ============ -->
+        <section class="screen pg-detail" data-id="success" data-title="确认预约">
+          <div class="page detail-page" style="filter:blur(1px);opacity:.55;">
+            <div class="card">
+              <div class="row-between"><div>
+                <div class="row"><span class="slot-no">B2-115</span><span class="tag tag-green slot-tag">可租</span></div>
+                <div class="tiny muted mt8">3栋 · 李娜 的车位</div></div>
+                <div class="price">¥50</div></div>
+              <div class="divider"></div>
+              <div class="kv"><span class="kv-k">使用时段</span><span class="kv-v">明天 09:00–18:00</span></div>
+              <div class="kv"><span class="kv-k">停放时长</span><span class="kv-v">9 小时</span></div>
+            </div>
+            <div class="card">
+              <div class="sec-title">填写预约信息</div>
+              <div class="field"><div class="field-label">车牌号</div><input class="field-input" value="沪A·2K78"></div>
+            </div>
+          </div>
+
+          <div class="mask">
+            <div class="sheet">
+              <div class="sheet-h center">预约成功</div>
+              <div class="tiny muted center">车牌已下发道闸白名单，可直接进场</div>
+              <div class="code-box">
+                <div class="code-lbl">通行码 · 道闸识别车牌自动放行</div>
+                <div class="code-num">735190</div>
+                <div class="code-plate">沪A2K78</div>
+              </div>
+              <div class="card" style="margin:0;background:#f8fafc;box-shadow:none;">
+                <div class="kv"><span class="kv-k">车位</span><span class="kv-v">B2-115（3栋）</span></div>
+                <div class="kv"><span class="kv-k">时段</span><span class="kv-v">明天 09:00–18:00</span></div>
+                <div class="kv"><span class="kv-k">金额</span><span class="kv-v">¥50</span></div>
+              </div>
+              <div class="btn btn-primary btn-block mt24">查看订单</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 我的订单 ============ -->
+        <section class="screen pg-orders" data-id="orders" data-title="我的订单">
+          <div class="page">
+            <div class="seg">
+              <div class="seg-item seg-item-on">进行中</div>
+              <div class="seg-item">全部订单</div>
+            </div>
+
+            <div class="order-card">
+              <div class="row-between">
+                <div class="row"><span class="order-spot">B2-115</span><span class="tag tag-blue order-tag">待入场</span></div>
+                <span class="tiny muted">今天 00:00–23:59</span>
+              </div>
+              <div class="tiny muted mt8">3栋 · 订单号 LL202611054821</div>
+              <div class="divider"></div>
+              <div class="kv"><span class="kv-k">车牌</span><span class="kv-v">沪A·2K78</span></div>
+              <div class="kv"><span class="kv-k">金额</span><span class="kv-v">¥50</span></div>
+              <div class="code-box">
+                <div class="code-lbl">入场通行码 · 车牌自动识别</div>
+                <div class="code-num">4821</div>
+                <div class="code-plate">沪A·2K78</div>
+              </div>
+              <div class="order-actions">
+                <div class="btn btn-sm btn-ghost">复制通行码</div>
+                <div class="btn btn-sm btn-blue">模拟入场</div>
+              </div>
+              <div class="tiny muted order-note">演示模式：真实环境下由道闸识别车牌自动抬杆，无需点按钮</div>
+            </div>
+
+            <div class="order-card">
+              <div class="row-between">
+                <div class="row"><span class="order-spot">B1-082</span><span class="tag tag-gray order-tag">已完成</span></div>
+                <span class="tiny muted">昨天 08:00–20:00</span>
+              </div>
+              <div class="tiny muted mt8">7栋 · 订单号 LL202611041093</div>
+              <div class="divider"></div>
+              <div class="kv"><span class="kv-k">车牌</span><span class="kv-v">沪F·2N19</span></div>
+              <div class="kv"><span class="kv-k">金额</span><span class="kv-v">¥60</span></div>
+            </div>
+
+            <div class="foot-tip">下拉刷新 / 点此刷新</div>
+          </div>
+        </section>
+
+        <!-- ============ 业主 · 我的车位 ============ -->
+        <section class="screen pg-host" data-id="host-spot" data-title="业主中心">
+          <div class="page">
+            <div class="seg">
+              <div class="seg-item seg-item-on">我的车位</div>
+              <div class="seg-item">发布时段</div>
+              <div class="seg-item">收益</div>
+            </div>
+
+            <div class="card">
+              <div class="row-between">
+                <div class="row">
+                  <div class="spot-avatar">7栋</div>
+                  <div style="margin-left:10px;">
+                    <div class="row"><span class="spot-title">B1-082</span><span class="tag tag-green spot-tag">已认证</span></div>
+                    <div class="tiny muted mt8">张伟 · 沪A·2K78</div>
+                    <div class="tiny muted">产权车位</div>
+                  </div>
+                </div>
+                <div class="btn btn-sm btn-ghost">改价</div>
+              </div>
+              <div class="divider"></div>
+              <div class="row-between">
+                <div class="price-box"><div class="price">12<span class="price-unit">元/时</span></div><div class="tiny muted">日封顶 ¥60</div></div>
+                <div class="price-box"><div class="big">1</div><div class="tiny muted">在售时段</div></div>
+                <div class="price-box"><div class="big">1</div><div class="tiny muted">进行中订单</div></div>
+              </div>
+            </div>
+
+            <div class="btn btn-primary btn-block">去发布空闲时段</div>
+            <div class="btn btn-line btn-block mt16">查看收益</div>
+          </div>
+        </section>
+
+        <!-- ============ 业主 · 发布时段 ============ -->
+        <section class="screen pg-host" data-id="host-publish" data-title="业主中心">
+          <div class="page">
+            <div class="seg">
+              <div class="seg-item">我的车位</div>
+              <div class="seg-item seg-item-on">发布时段</div>
+              <div class="seg-item">收益</div>
+            </div>
+
+            <div class="card">
+              <div class="sec-title" style="margin-bottom:6px;">一键发布</div>
+              <div class="tiny muted">出游 / 出差时最快 3 秒挂出租</div>
+              <div class="quick">
+                <div class="quick-ico">🚗</div>
+                <div class="flex1"><div class="bold">周末出游 · 挂两天</div><div class="tiny muted">本周六、周日 08:00 – 20:00</div></div>
+                <div class="quick-arrow">›</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="sec-title" style="margin-bottom:6px;">自定义时段</div>
+              <div class="field"><div class="field-label">日期</div><div class="picker-value">2026-11-06</div></div>
+              <div class="row mt24">
+                <div class="flex1" style="margin-right:8px;"><div class="field-label">开始时间</div><div class="picker-value">08:00</div></div>
+                <div class="flex1"><div class="field-label">结束时间</div><div class="picker-value">20:00</div></div>
+              </div>
+              <div class="sum-box">
+                <div class="row-between"><span class="small muted">预计到手（75%）</span><span class="price">¥45</span></div>
+              </div>
+              <div class="btn btn-primary btn-block mt24">确认发布</div>
+            </div>
+
+            <div class="sec"><div class="sec-title">我发布的时段</div><div class="sec-hint">1 个在售</div></div>
+            <div class="slot-row">
+              <div class="flex1"><div class="bold">明天 08:00–20:00</div><div class="tiny muted mt8">12 小时 · 标价 ¥60</div></div>
+              <span class="tag tag-blue">待入场</span>
+            </div>
+            <div class="slot-row">
+              <div class="flex1"><div class="bold">后天 08:00–20:00</div><div class="tiny muted mt8">12 小时 · 标价 ¥60</div></div>
+              <span class="tag tag-green">可租</span>
+              <div class="btn btn-sm btn-ghost" style="margin-left:8px;">下架</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 业主 · 收益 ============ -->
+        <section class="screen pg-host" data-id="host-income" data-title="业主中心">
+          <div class="page">
+            <div class="seg">
+              <div class="seg-item">我的车位</div>
+              <div class="seg-item">发布时段</div>
+              <div class="seg-item seg-item-on">收益</div>
+            </div>
+
+            <div class="hero">
+              <div class="hero-sub">累计收益（已扣平台与物业分成）</div>
+              <div class="hero-money">¥45</div>
+              <div class="hero-row">
+                <div class="hero-stat"><div class="hero-num">1</div><div class="hero-lbl">已完成订单</div></div>
+                <div class="hero-stat"><div class="hero-num">1</div><div class="hero-lbl">进行中</div></div>
+              </div>
+            </div>
+
+            <div class="sec"><div class="sec-title">订单明细</div><div class="sec-hint">业主分成 75%</div></div>
+
+            <div class="order-card">
+              <div class="row-between">
+                <div class="row"><span class="order-spot">昨天 08:00–20:00</span><span class="tag tag-gray order-tag">已完成</span></div>
+                <span class="tiny muted">B1-082</span>
+              </div>
+              <div class="divider"></div>
+              <div class="kv"><span class="kv-k">租客 / 车牌</span><span class="kv-v">周先生 · 沪F·2N19</span></div>
+              <div class="kv"><span class="kv-k">订单金额</span><span class="kv-v">¥60</span></div>
+              <div class="kv"><span class="kv-k">我的收入</span><span class="kv-v green">¥45</span></div>
+            </div>
+
+            <div class="order-card">
+              <div class="row-between">
+                <div class="row"><span class="order-spot">明天 08:00–20:00</span><span class="tag tag-blue order-tag">待入场</span></div>
+                <span class="tiny muted">B1-082</span>
+              </div>
+              <div class="divider"></div>
+              <div class="kv"><span class="kv-k">租客 / 车牌</span><span class="kv-v">刘先生 · 沪E·6R88</span></div>
+              <div class="kv"><span class="kv-k">订单金额</span><span class="kv-v">¥60</span></div>
+              <div class="kv"><span class="kv-k">我的收入</span><span class="kv-v green">¥45</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 物业 · 放行名单 ============ -->
+        <section class="screen pg-property" data-id="prop-access" data-title="物业后台">
+          <div class="page">
+            <div class="seg">
+              <div class="seg-item seg-item-on">放行名单</div>
+              <div class="seg-item">车位审核</div>
+              <div class="seg-item">经营看板</div>
+            </div>
+
+            <div class="card">
+              <div class="row-between">
+                <div><div class="sec-title">今日放行名单</div><div class="tiny muted mt8">共 2 辆 · 道闸白名单已同步</div></div>
+                <div class="btn btn-sm btn-ghost">复制名单</div>
+              </div>
+            </div>
+
+            <div class="gate-card">
+              <div class="sec-title" style="margin-bottom:12px;">道闸识别核验</div>
+              <div class="gate-in">
+                <input class="gate-input" value="沪A·2K78">
+                <div class="btn btn-blue btn-sm gate-btn">识别</div>
+              </div>
+              <div class="gate-res ok">
+                <div class="gate-res-title">✅ 抬杆放行</div>
+                <div class="gate-res-msg">有效预约 · 车位 B2-115（3栋）· 通行码 4821</div>
+              </div>
+            </div>
+
+            <div class="pass-card">
+              <div class="row-between"><span class="pass-plate">沪A·2K78</span><span class="tag tag-blue">待入场</span></div>
+              <div class="divider"></div>
+              <div class="kv"><span class="kv-k">车位</span><span class="kv-v">B2-115（3栋）</span></div>
+              <div class="kv"><span class="kv-k">放行时段</span><span class="kv-v">今天 00:00–23:59</span></div>
+              <div class="kv"><span class="kv-k">通行码</span><span class="kv-v code-text">4821 复制</span></div>
+            </div>
+
+            <div class="pass-card">
+              <div class="row-between"><span class="pass-plate">沪E·6R88</span><span class="tag tag-blue">待入场</span></div>
+              <div class="divider"></div>
+              <div class="kv"><span class="kv-k">车位</span><span class="kv-v">B1-082（7栋）</span></div>
+              <div class="kv"><span class="kv-k">放行时段</span><span class="kv-v">明天 08:00–20:00</span></div>
+              <div class="kv"><span class="kv-k">通行码</span><span class="kv-v code-text">7350 复制</span></div>
+            </div>
+
+            <div class="card">
+              <div class="sec-title" style="margin-bottom:10px;">放行规则</div>
+              <div class="rule">· 生效：预约开始前 30 分钟 · 失效：结束时刻</div>
+              <div class="rule">· 车牌匹配即自动抬杆，无需人工核对</div>
+              <div class="rule">· 超时出场按 1.5 倍时价自动补扣</div>
+              <div class="rule">· 未预约车辆一律拒绝，走访客登记</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 物业 · 车位审核 ============ -->
+        <section class="screen pg-property" data-id="prop-audit" data-title="物业后台">
+          <div class="page">
+            <div class="seg">
+              <div class="seg-item">放行名单</div>
+              <div class="seg-item seg-item-on">车位审核</div>
+              <div class="seg-item">经营看板</div>
+            </div>
+
+            <div class="sec"><div class="sec-title">待审核车位</div><div class="sec-hint">1 个</div></div>
+
+            <div class="card">
+              <div class="row-between"><div>
+                <div class="row"><span class="bold" style="font-size:16px;">A1-019</span><span class="tag tag-amber" style="margin-left:6px;">待审核</span></div>
+                <div class="tiny muted mt8">1栋 · 王强 · 137****9087</div>
+                <div class="tiny muted">申请价 ¥15/时 · 日封顶 ¥70</div>
+                <div class="tiny muted">车位性质：产权车位</div>
+              </div></div>
+              <div class="row mt24" style="justify-content:flex-end;">
+                <div class="btn btn-sm btn-ghost">驳回</div>
+                <div class="btn btn-sm btn-primary" style="margin-left:8px;">通过认证</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="sec-title" style="margin-bottom:10px;">审核要点</div>
+              <div class="rule">· 核对产权证 / 租赁合同与车位号是否一致</div>
+              <div class="rule">· 确认车位为产权车位或允许转租的月租车位</div>
+              <div class="rule">· 人防车位不得用于盈利性转租，一律驳回</div>
+              <div class="rule">· 登记业主车牌，与道闸系统比对</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 物业 · 经营看板 ============ -->
+        <section class="screen pg-property" data-id="prop-stats" data-title="物业后台">
+          <div class="page">
+            <div class="seg">
+              <div class="seg-item">放行名单</div>
+              <div class="seg-item">车位审核</div>
+              <div class="seg-item seg-item-on">经营看板</div>
+            </div>
+
+            <div class="hero">
+              <div class="hero-sub">今日 GMV</div>
+              <div class="hero-money">¥50</div>
+              <div class="hero-row">
+                <div class="hero-stat"><div class="hero-num">1</div><div class="hero-lbl">今日订单</div></div>
+                <div class="hero-stat"><div class="hero-num">0</div><div class="hero-lbl">当前在场</div></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="sec-title" style="margin-bottom:16px;">今日分账</div>
+              <div class="kv"><span class="kv-k">平台服务费 10%</span><span class="kv-v">¥5</span></div>
+              <div class="kv"><span class="kv-k">物业分成 15%</span><span class="kv-v blue">¥7.50</span></div>
+              <div class="kv"><span class="kv-k">业主收入 75%</span><span class="kv-v green">¥37.50</span></div>
+              <div class="divider"></div>
+              <div class="kv"><span class="kv-k bold">合计</span><span class="kv-v bold">¥50</span></div>
+            </div>
+
+            <div class="card">
+              <div class="sec-title" style="margin-bottom:16px;">运营数据</div>
+              <div class="stat-grid">
+                <div class="stat"><div class="stat-inner"><div class="stat-v">33%</div><div class="stat-l">今日出租率</div></div></div>
+                <div class="stat"><div class="stat-inner"><div class="stat-v">3</div><div class="stat-l">已认证车位</div></div></div>
+                <div class="stat"><div class="stat-inner"><div class="stat-v">4</div><div class="stat-l">累计订单</div></div></div>
+                <div class="stat"><div class="stat-inner"><div class="stat-v">¥170</div><div class="stat-l">累计 GMV</div></div></div>
+              </div>
+              <div class="tiny muted mt16">全小区共 386 个车位</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 我的 ============ -->
+        <section class="screen pg-profile" data-id="profile" data-title="我的">
+          <div class="page">
+            <div class="hero">
+              <div class="row">
+                <div class="hero-avatar">张</div>
+                <div style="margin-left:12px;">
+                  <div class="hero-title" style="font-size:18px;">张伟</div>
+                  <div class="hero-sub">阳光花园 · 7栋</div>
+                  <div class="hero-sub">手机号 138****6621</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sec"><div class="sec-title">当前身份</div><div class="sec-hint">不同身份进入不同工作台</div></div>
+
+            <div class="card">
+              <div class="role-row role-row-on">
+                <div class="role-ico">🚗</div>
+                <div class="flex1"><div class="bold">租客</div><div class="tiny muted">查找并预约车位</div></div>
+                <div class="role-check">✓</div>
+              </div>
+              <div class="role-row">
+                <div class="role-ico">🅿️</div>
+                <div class="flex1"><div class="bold">业主</div><div class="tiny muted">发布空闲时段赚租金</div></div>
+              </div>
+              <div class="role-row">
+                <div class="role-ico">🏢</div>
+                <div class="flex1"><div class="bold">物业</div><div class="tiny muted">审核 / 放行 / 分账</div></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="sec-title" style="margin-bottom:10px;">使用说明</div>
+              <div class="rule">· 业主发布空闲时段，系统按小时计价、日封顶</div>
+              <div class="rule">· 租客下单支付后，车牌自动下发道闸白名单</div>
+              <div class="rule">· 预约开始前 30 分钟生效，结束时刻失效</div>
+              <div class="rule">· 超时按 1.5 倍时价自动计费，出场结算</div>
+              <div class="rule">· 分账：平台 10% / 物业 15% / 业主 75%</div>
+            </div>
+
+            <div class="card">
+              <div class="row-between">
+                <div><div class="bold">演示模式</div><div class="tiny muted mt8">当前使用本地模拟数据，未连接云开发</div></div>
+                <div class="btn btn-sm btn-ghost">重置数据</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="kv"><span class="kv-k">版本</span><span class="kv-v">v0.1.0</span></div>
+              <div class="kv"><span class="kv-k">运行模式</span><span class="kv-v">本地演示</span></div>
+              <div class="kv"><span class="kv-k">道闸</span><span class="kv-v">捷顺 JSD-3B2</span></div>
+              <div class="kv"><span class="kv-k">对接模式</span><span class="kv-v">L2 白名单</span></div>
+            </div>
+
+            <div class="btn btn-line btn-block mt24">返回首页</div>
+            <div class="foot-tip">邻里车位 · 社区闲置车位分时共享</div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">← 左侧切换 12 个界面 · 样式由真实 WXSS 转换（1rpx = 0.5px，375pt 基准）<br>最终效果请以微信开发者工具为准</div>
+</div>
+
+<script>
+const items = Array.from(document.querySelectorAll('.side-item'));
+const titles = {};
+document.querySelectorAll('.screen').forEach(function (s) { titles[s.dataset.id] = s.dataset.title; });
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(function (s) {
+    s.classList.toggle('on', s.dataset.id === id);
+  });
+  items.forEach(function (b) { b.classList.toggle('on', b.dataset.id === id); });
+  document.getElementById('navTitle').textContent = titles[id] || '邻里车位';
+  document.getElementById('body').scrollTop = 0;
+}
+items.forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.id); }); });
+show('index');
+</script>
+</body>
+</html>

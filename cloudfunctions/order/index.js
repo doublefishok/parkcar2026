@@ -5,7 +5,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
 
-const PAY_TIMEOUT = 15 * 60 * 1000; // 未支付订单 15 分钟自动释放
+const PAY_TIMEOUT = 15 * 60 * 1000;      // 未支付订单 15 分钟自动释放
+const ENTRY_LEAD = 30 * 60 * 1000;       // 开始前 30 分钟可入场
 
 async function docOrNull(coll, id) {
   try { return (await db.collection(coll).doc(id).get()).data; } catch (e) { return null; }
@@ -14,16 +15,17 @@ async function docOrNull(coll, id) {
 async function assertAdmin(OPENID) {
   const r = await db.collection('users').where({ _openid: OPENID }).limit(1).get();
   const u = r.data[0];
-  return !!(u && (u.role === 'property' || u.isAdmin));
+  // 只认 isAdmin：role 字段用户可自行切换，不能作为权限依据
+  return !!(u && u.isAdmin === true);
 }
 
-/** 回收超时未支付订单，释放车位 */
+/** 回收超时未支付订单，释放车位（定时任务也会做，这里作为兜底） */
 async function cleanupUnpaid() {
   const cutoff = Date.now() - PAY_TIMEOUT;
   const r = await db.collection('orders')
-    .where({ status: 'unpaid', createdAt: _.lt(cutoff) }).limit(50).get();
+    .where({ status: 'unpaid', createdAt: _.lt(cutoff) }).limit(100).get();
   for (const o of r.data) {
-    await db.collection('orders').doc(o._id).update({ data: { status: 'cancelled' } });
+    await db.collection('orders').doc(o._id).update({ data: { status: 'cancelled', cancelledAt: Date.now() } });
     await db.collection('slots').where({ _id: o.slotId, status: 'locked' }).update({ data: { status: 'available' } });
   }
 }
@@ -33,15 +35,15 @@ async function buildList(orders, split) {
   const slotIds = Array.from(new Set(orders.map(function (o) { return o.slotId; })));
   const spotIds = Array.from(new Set(orders.map(function (o) { return o.spotId; })));
 
-  const slots = (await db.collection('slots').where({ _id: _.in(slotIds) }).limit(100).get()).data;
-  const spots = (await db.collection('spots').where({ _id: _.in(spotIds) }).limit(100).get()).data;
+  const slots = (await db.collection('slots').where({ _id: _.in(slotIds) }).limit(1000).get()).data;
+  const spots = (await db.collection('spots').where({ _id: _.in(spotIds) }).limit(1000).get()).data;
 
   const smap = {}; slots.forEach(function (s) { smap[s._id] = s; });
   const pmap = {}; spots.forEach(function (p) { pmap[p._id] = p; });
 
   return orders.map(function (o) {
     const slot = smap[o.slotId] || { date: o.date, from: o.from, to: o.to };
-    const spot = pmap[o.spotId] || { spotNo: '—', building: '—' };
+    const spot = pmap[o.spotId] || { spotNo: '—', building: '—', pricePerHour: 10, dayCap: 50 };
     return common.buildOrderView(o, slot, spot, split);
   });
 }
@@ -76,6 +78,7 @@ exports.main = async function (event) {
         .update({ data: { status: 'locked' } });
       if (lock.stats.updated === 0) return common.fail('手慢了，该时段已被预约');
 
+      const plate = common.normPlate(event.plate);
       const order = {
         _openid: OPENID,
         orderNo: common.genOrderNo(),
@@ -85,7 +88,9 @@ exports.main = async function (event) {
         renterOpenid: OPENID,
         renterName: String(event.renterName).slice(0, 20),
         renterPhone: String(event.phone || '').slice(0, 20),
-        plate: common.normPlate(event.plate),
+        plate: plate,
+        // 归一化车牌，用于道闸核验时的精确索引查询（避免全表扫描）
+        plateKey: plate,
         date: slot.date,
         from: slot.from,
         to: slot.to,
@@ -132,7 +137,7 @@ exports.main = async function (event) {
       if (o.renterOpenid !== OPENID) return common.fail('无权操作', 403);
       if (o.status !== 'unpaid') return common.fail('已支付订单请走退款流程');
 
-      await db.collection('orders').doc(o._id).update({ data: { status: 'cancelled' } });
+      await db.collection('orders').doc(o._id).update({ data: { status: 'cancelled', cancelledAt: Date.now() } });
       await db.collection('slots').where({ _id: o.slotId, status: 'locked' }).update({ data: { status: 'available' } });
       return common.ok({});
     }
@@ -141,7 +146,7 @@ exports.main = async function (event) {
       const o = await docOrNull('orders', event.orderId);
       if (!o) return common.fail('订单不存在', 404);
       const slot = await docOrNull('slots', o.slotId) || { date: o.date, from: o.from, to: o.to };
-      const spot = await docOrNull('spots', o.spotId) || { spotNo: '—', building: '—' };
+      const spot = await docOrNull('spots', o.spotId) || { spotNo: '—', building: '—', pricePerHour: 10, dayCap: 50 };
       return common.ok({ order: common.buildOrderView(o, slot, spot, common.SPLIT), spot: spot });
     }
 
@@ -158,7 +163,8 @@ exports.main = async function (event) {
     }
 
     /* ---------- 入场核销 ----------
-     * 生产环境由道闸车牌识别触发；此处保留人工/调试入口
+     * 生产环境由道闸车牌识别触发。此处保留人工/调试入口，
+     * 但同样校验「开始前 30 分钟 ~ 结束」的时间窗口，防止绕过 access/verify 提前入场。
      */
     if (action === 'checkin') {
       const o = await docOrNull('orders', event.orderId);
@@ -167,9 +173,17 @@ exports.main = async function (event) {
       if (o.renterOpenid !== OPENID && !isAdmin) return common.fail('无权操作', 403);
       if (o.status !== 'paid') return common.fail('订单状态不正确');
 
-      await db.collection('orders').doc(o._id).update({ data: { status: 'checked_in', inAt: Date.now() } });
+      const now = Date.now();
+      const okFrom = common.slotTs(o.date, o.from) - ENTRY_LEAD;
+      const okTo = common.slotTs(o.date, o.to);
+      if (!isAdmin) {
+        if (now < okFrom) return common.fail('未到入场时间（开始前 30 分钟生效），' + o.from + ' 前不可入场');
+        if (now > okTo) return common.fail('预约已过期（' + o.to + ' 失效），不可入场');
+      }
+
+      await db.collection('orders').doc(o._id).update({ data: { status: 'checked_in', inAt: now } });
       await db.collection('access_logs').add({
-        data: { orderId: o._id, plate: o.plate, type: 'in', gate: '南门入口', source: 'manual', at: Date.now() }
+        data: { orderId: o._id, plate: o.plate, type: 'in', gate: '南门入口', source: 'manual', at: now }
       });
       return common.ok({ order: Object.assign({}, o, { status: 'checked_in' }) });
     }
@@ -182,8 +196,8 @@ exports.main = async function (event) {
       if (o.renterOpenid !== OPENID && !isAdmin) return common.fail('无权操作', 403);
       if (o.status !== 'checked_in') return common.fail('订单状态不正确');
 
-      const spot = await docOrNull('spots', o.spotId) || { pricePerHour: 10 };
-      const extra = common.extraFeeOf(o, spot);
+      const spot = await docOrNull('spots', o.spotId) || { pricePerHour: 10, dayCap: 50 };
+      const extra = common.extraFeeOf(Object.assign({}, o, { status: 'checked_in' }), spot);
       const now = Date.now();
 
       await db.collection('orders').doc(o._id).update({

@@ -5,6 +5,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
 
+const ENTRY_LEAD = 30 * 60 * 1000;
+
 async function docOrNull(coll, id) {
   try { return (await db.collection(coll).doc(id).get()).data; } catch (e) { return null; }
 }
@@ -12,7 +14,20 @@ async function docOrNull(coll, id) {
 async function assertAdmin(OPENID) {
   const r = await db.collection('users').where({ _openid: OPENID }).limit(1).get();
   const u = r.data[0];
-  return !!(u && (u.role === 'property' || u.isAdmin));
+  // 只认 isAdmin：role 可由用户自行切换，不能作为权限依据
+  return !!(u && u.isAdmin === true);
+}
+
+/** 按车牌查有效订单：优先走 plateKey 索引，老数据回退到 plate 字段 */
+async function findActiveByPlate(plate) {
+  const statusIn = _.in(['paid', 'checked_in']);
+  let rows = (await db.collection('orders')
+    .where({ plateKey: plate, status: statusIn }).limit(1).get()).data;
+  if (!rows.length) {
+    rows = (await db.collection('orders')
+      .where({ plate: plate, status: statusIn }).limit(1).get()).data;
+  }
+  return rows[0] || null;
 }
 
 /**
@@ -30,19 +45,19 @@ exports.main = async function (event) {
 
       const r = await db.collection('orders')
         .where({ status: _.in(['paid', 'checked_in']) })
-        .orderBy('date', 'asc').limit(100).get();
+        .orderBy('date', 'asc').limit(1000).get();
 
       const slotIds = Array.from(new Set(r.data.map(function (o) { return o.slotId; })));
       const spotIds = Array.from(new Set(r.data.map(function (o) { return o.spotId; })));
-      const slots = slotIds.length ? (await db.collection('slots').where({ _id: _.in(slotIds) }).limit(100).get()).data : [];
-      const spots = spotIds.length ? (await db.collection('spots').where({ _id: _.in(spotIds) }).limit(100).get()).data : [];
+      const slots = slotIds.length ? (await db.collection('slots').where({ _id: _.in(slotIds) }).limit(1000).get()).data : [];
+      const spots = spotIds.length ? (await db.collection('spots').where({ _id: _.in(spotIds) }).limit(1000).get()).data : [];
 
       const smap = {}; slots.forEach(function (s) { smap[s._id] = s; });
       const pmap = {}; spots.forEach(function (p) { pmap[p._id] = p; });
 
       const list = r.data.map(function (o) {
         const slot = smap[o.slotId] || { date: o.date, from: o.from, to: o.to };
-        const spot = pmap[o.spotId] || { spotNo: '—', building: '—' };
+        const spot = pmap[o.spotId] || { spotNo: '—', building: '—', pricePerHour: 10, dayCap: 50 };
         return common.buildOrderView(o, slot, spot, common.SPLIT);
       }).sort(function (a, b) { return (a.date + a.timeText > b.date + b.timeText) ? 1 : -1; });
 
@@ -58,19 +73,16 @@ exports.main = async function (event) {
       const plate = common.normPlate(event.plate);
       if (!plate) return common.fail('请输入车牌号');
 
-      const r = await db.collection('orders')
-        .where({ status: _.in(['paid', 'checked_in']) }).limit(100).get();
-      const target = r.data.filter(function (o) { return common.normPlate(o.plate) === plate; })[0];
-
+      const target = await findActiveByPlate(plate);
       if (!target) {
         return common.ok({ allow: false, plate: plate, msg: '未查询到该车牌的有效预约' });
       }
 
       const slot = await docOrNull('slots', target.slotId) || { date: target.date, from: target.from, to: target.to };
-      const spot = await docOrNull('spots', target.spotId) || { spotNo: '—', building: '—' };
+      const spot = await docOrNull('spots', target.spotId) || { spotNo: '—', building: '—', pricePerHour: 10, dayCap: 50 };
 
       const now = Date.now();
-      const okFrom = common.slotTs(slot.date, slot.from) - 30 * 60000;
+      const okFrom = common.slotTs(slot.date, slot.from) - ENTRY_LEAD;
       const okTo = common.slotTs(slot.date, slot.to);
 
       let allow = false, msg = '';
@@ -86,7 +98,6 @@ exports.main = async function (event) {
         msg = '有效预约 · 车位 ' + spot.spotNo + '（' + spot.building + '）· 通行码 ' + target.code;
       }
 
-      // 记录核验流水（便于追溯与对账）
       try {
         await db.collection('access_logs').add({
           data: {

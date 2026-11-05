@@ -55,6 +55,9 @@ function seed() {
     }
   ];
 
+  // 归一化车牌索引，与云端 plateKey 字段保持一致
+  orders.forEach(function (o) { o.plateKey = util.normPlate(o.plate); });
+
   return {
     version: DB_VERSION,
     community: {
@@ -318,6 +321,7 @@ const routes = {
       renterName: p.renterName,
       renterPhone: p.phone || '',
       plate: util.normPlate(p.plate),
+      plateKey: util.normPlate(p.plate),
       date: sl.date,
       from: sl.from,
       to: sl.to,
@@ -436,7 +440,8 @@ const routes = {
     const plate = util.normPlate(p.plate);
     if (!plate) return { code: 400, msg: '请输入车牌号' };
     const target = db.orders.filter(function (o) {
-      return (o.status === 'paid' || o.status === 'checked_in') && util.normPlate(o.plate) === plate;
+      const key = o.plateKey || util.normPlate(o.plate);
+      return (o.status === 'paid' || o.status === 'checked_in') && key === plate;
     })[0];
 
     if (!target) {
@@ -507,8 +512,37 @@ const routes = {
   }
 };
 
+/* ---------------- 模拟定时任务（与 cloudfunctions/timer 对齐） ---------------- */
+function settleOverdue() {
+  const db = loadDB();
+  const now = Date.now();
+  const AUTO_FINISH_AFTER = 6 * 3600 * 1000;
+  let changed = false;
+
+  db.orders.forEach(function (o) {
+    if (o.status !== 'checked_in') return;
+    const end = util.slotTs(o.date, o.to);
+    if (now <= end) return;
+
+    const sp = spotOf(o.spotId) || { pricePerHour: 10, dayCap: 50 };
+    const extra = util.extraFeeOf(Object.assign({}, o, { status: 'checked_in' }), sp);
+    if (extra !== o.extraAmount) { o.extraAmount = extra; changed = true; }
+
+    if (now > end + AUTO_FINISH_AFTER) {
+      o.status = 'finished';
+      o.outAt = end + AUTO_FINISH_AFTER;
+      o.finishedAt = now;
+      o.autoFinished = true;
+      changed = true;
+    }
+  });
+
+  if (changed) persist();
+}
+
 /* ---------------- 统一入口 ---------------- */
 function handle(name, action, params) {
+  settleOverdue();
   const key = name + '/' + action;
   const fn = routes[key];
   if (!fn) {

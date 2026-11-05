@@ -1,0 +1,9 @@
+{
+  "name": "timer",
+  "version": "1.0.0",
+  "description": "定时任务：释放未支付订单 / 累计超时费 / 自动封账",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

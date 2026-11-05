@@ -30,13 +30,14 @@ linli-parking/
 │       ├── host/                业主 · 车位 / 发布时段 / 收益
 │       ├── property/            物业 · 放行名单 / 审核 / 看板
 │       └── profile/             我的 · 身份切换 / 说明
-├── cloudfunctions/              ← 云函数（6 个）
+├── cloudfunctions/              ← 云函数（7 个）
 │   ├── login/                   登录、用户资料、角色
 │   ├── spot/                    车位列表、详情、备案、审核
 │   ├── slot/                    空闲时段发布 / 下架
 │   ├── order/                   下单、支付、取消、入场、结算
 │   ├── access/                  道闸白名单、车牌核验、通行流水
-│   └── admin/                   物业经营看板
+│   ├── admin/                   物业经营看板
+│   └── timer/                   定时任务（释放未支付 / 累计超时费 / 自动封账）
 ├── shared/
 │   ├── cloudfn-common.js        云函数公共库（计价/视图/校验）
 │   └── sync-cloudfn.js          把公共库同步进各云函数目录
@@ -87,13 +88,13 @@ linli-parking/
 5. **建集合**：云开发控制台 → 数据库 → 新建 6 个集合
    `communities`、`users`、`spots`、`slots`、`orders`、`access_logs`
    每个集合权限设为 **「仅管理端可读写」**（所有读写都走云函数，前端不直连数据库）
-6. **部署云函数**：在开发者工具左侧 `cloudfunctions` 下，对 6 个函数逐个右键 →
+6. **部署云函数**：在开发者工具左侧 `cloudfunctions` 下，对 **7 个**函数逐个右键 →
    **「上传并部署：云端安装依赖」**
 7. **导入种子数据**：见 [`database/README.md`](database/README.md)
 8. **设置物业账号**：在 `users` 集合里把你自己的账号加一个字段 `isAdmin: true`，
    否则无法切换物业身份（见下方权限说明）
 9. **建索引**（重要，否则数据量上来会慢）：
-   - `orders`: `renterOpenid + createdAt`、`ownerOpenid + createdAt`、`status`、`date`
+   - `orders`: `renterOpenid + createdAt`、`ownerOpenid + createdAt`、`status`、`date`、**`plateKey + status`**（道闸核验必建）
    - `slots`: `date + status`、`spotId`
    - `spots`: `ownerOpenid`、`status`
 
@@ -126,6 +127,7 @@ linli-parking/
 | | `verify` | 按车牌核验是否放行 + 写入通行流水 |
 | | `logs` | 通行流水 |
 | `admin` | `stats` | GMV、出租率、三方分账、在场车辆 |
+| `timer` | —（定时触发） | 每 10 分钟：释放超时未支付订单、累计超时费、超时 6h 自动封账 |
 
 > 云函数公共代码在 `shared/cloudfn-common.js`。**修改后必须运行** `node shared/sync-cloudfn.js`，
 > 因为云函数部署时只上传各自目录。
@@ -185,6 +187,10 @@ linli-parking/
 | **不能预约自己的车位** | `order/create` | 防刷单 |
 | **时段重叠校验** | `slot/publish` | 防止同一车位卖出两份 |
 | **人防车位提示** | 备案页 + 审核页 | 规避违规转租风险 |
+| **时区** 全部按东八区显式计算 | `common.nowCN` / `slotTs` / `dateStr` | 云函数运行在 UTC，用本地时区会差 8 小时、凌晨时段还会差一天 |
+| **超时费封顶** 最多 2 倍日封顶 | `common.extraFeeOf` | 防止出现天价超时费被投诉 |
+| **定时结算** 每 10 分钟自动累计超时费 | `cloudfunctions/timer` | 不依赖客户端点「出场」，超时费才收得到 |
+| **车牌索引** 归一化 `plateKey` 精确查询 | `order/create` + `access/verify` | 避免全表扫描导致 >100 单时误拒放行 |
 
 ---
 
@@ -262,7 +268,27 @@ node tests/cloud-test.js
 - [ ] 支付为演示模式，需按第六章接入微信支付
 - [ ] 道闸为名单导出模式，L3 API 适配器待接
 - [ ] 订单列表分页未做（当前 limit 50），上线前需补
+- [ ] 定时任务依赖云开发「定时触发器」，需在部署后确认触发器已生效
 - [ ] `publishWeekend` 以「本周六」计算，跨周场景需产品确认
 - [ ] 缺少退款 / 申诉 / 评价体系
 - [ ] 缺少订阅消息（下单成功、即将到期、超时提醒）——建议下一步优先做
 - [ ] 多小区支持：当前 `communities` 取第一条，多小区需按用户 `communityId` 隔离
+
+
+---
+
+## 十一、更新记录
+
+### v0.2.0 — 修复 3 个 P0 问题
+
+| 问题 | 现象 | 修复 |
+|---|---|---|
+| **时区错乱** | 云函数运行在 UTC，`new Date()` 取到的是 UTC 时间。北京时间 00:00–08:00 之间会把「今天」算成昨天；`slotTs` 两端相差 8 小时，导致道闸窗口整体偏移 | 全部时间计算改为显式东八区：`nowCN()` / `Date.UTC(...) - 8h`，客户端与云端完全一致 |
+| **道闸误拒** | `access/verify` 拉最多 100 条在场订单在内存里比对车牌，超过 100 辆时命中不到 → 业主被拦在道闸口 | 订单新增归一化 `plateKey` 字段，改为索引精确查询；老数据回退 `plate` 字段 |
+| **超时费收不到** | 超时费只在客户端点「出场」时计算，租客不点就永远不计费 | 新增 `timer` 定时云函数（每 10 分钟）：累计超时费落库 + 超时 6 小时自动封账 |
+
+额外加固：
+- 超时费封顶 2 倍日封顶，防止天价账单
+- `order/checkin` 增加时间窗口校验（此前租客可绕过 `access/verify` 提前入场）
+- `assertAdmin` 只认 `isAdmin`，不再把可自行切换的 `role` 当作权限依据
+- 回归测试从 31 项扩展到 40 项，覆盖时区、车牌索引、时间窗口、定时结算
