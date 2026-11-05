@@ -19,6 +19,15 @@ const TZ_OFFSET = 8 * 3600 * 1000;
 /** 超时费上限倍数：最多按 2 个日封顶收取，避免出现天价超时费 */
 const OVERDUE_CAP_RATIO = 2;
 
+/** 取消规则：开始前 2 小时以上全额退；2 小时内退 50% */
+const CANCEL_RULES = {
+  freeBeforeMs: 2 * 3600 * 1000,
+  feeRatio: 0.5
+};
+
+/** 业主临时收回车位的补偿比例（从业主应得收入中扣） */
+const OWNER_CANCEL_PENALTY_RATIO = 0.3;
+
 /* ---------------- 响应 ---------------- */
 function ok(data) { return { code: 0, data: data || {} }; }
 function fail(msg, code) { return { code: code || 400, msg: msg }; }
@@ -111,6 +120,25 @@ function extraFeeOf(order, spot) {
   return Math.max(live, order.extraAmount || 0);
 }
 
+/**
+ * 租客取消已支付订单时的退款金额
+ *  - 开始前 >= 2 小时：全额退
+ *  - 开始前 <  2 小时：退 50%
+ */
+function refundOf(order) {
+  const base = order.baseAmount || 0;
+  if (order.status !== 'paid') return 0;
+  const start = slotTs(order.date, order.from);
+  const lead = start - Date.now();
+  if (lead >= CANCEL_RULES.freeBeforeMs) return base;
+  return Math.round(base * (1 - CANCEL_RULES.feeRatio));
+}
+
+/** 业主取消订单时的补偿金额 */
+function ownerPenaltyOf(order) {
+  return Math.round((order.baseAmount || 0) * OWNER_CANCEL_PENALTY_RATIO);
+}
+
 function orderStatusMeta(order) {
   const map = {
     unpaid: { label: '待支付', cls: 'tag-gray' },
@@ -193,6 +221,10 @@ module.exports = {
   SPLIT: SPLIT,
   TZ_OFFSET: TZ_OFFSET,
   OVERDUE_CAP_RATIO: OVERDUE_CAP_RATIO,
+  CANCEL_RULES: CANCEL_RULES,
+  OWNER_CANCEL_PENALTY_RATIO: OWNER_CANCEL_PENALTY_RATIO,
+  refundOf: refundOf,
+  ownerPenaltyOf: ownerPenaltyOf,
   ok: ok, fail: fail,
   nowCN: nowCN, pad: pad, dateStr: dateStr, dayLabel: dayLabel, weekdayCn: weekdayCn,
   hmToMin: hmToMin, hoursBetween: hoursBetween, slotTs: slotTs, fmtHours: fmtHours, money: money,

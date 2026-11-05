@@ -212,6 +212,26 @@ Page({
     });
   },
 
+  /** 业主临时收回车位：全额退租客，并记一笔补偿 */
+  onOwnerCancel(e) {
+    const id = e.currentTarget.dataset.id;
+    const that = this;
+    wx.showModal({
+      title: '收回车位',
+      content: '将全额退款给租客，并从你的收入中扣除订单金额 30% 作为补偿。确定吗？',
+      confirmText: '确定收回',
+      confirmColor: '#ef4444',
+      success: function (r) {
+        if (!r.confirm) return;
+        api.call('order', 'ownerCancel', { orderId: id }).then(function (res) {
+          if (res.code !== 0) { util.toast(res.msg); return; }
+          util.toast('已收回，退款 ' + util.money(res.data.refund), 'success');
+          that.load();
+        });
+      }
+    });
+  },
+
   goFind() {
     wx.navigateTo({ url: '/pages/find/find' });
   },

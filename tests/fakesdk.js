@@ -93,6 +93,16 @@ const cloud = {
   init() {},
   getWXContext() { return { OPENID: OPENID.value, APPID: 'testapp' }; },
   database() { return { collection: n => new Collection(n), command: _ }; },
+  openapi: {
+    subscribeMessage: {
+      send: async (opts) => {
+        if (!cloud.__sent) cloud.__sent = [];
+        cloud.__sent.push(opts);
+        return { errCode: 0, errMsg: 'ok' };
+      }
+    }
+  },
+  __sent: [],
   __store: store,
   __setOpenid(o) { OPENID.value = o; },
   __seed(name, arr) { store[name] = arr; }

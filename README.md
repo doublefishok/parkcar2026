@@ -30,14 +30,15 @@ linli-parking/
 │       ├── host/                业主 · 车位 / 发布时段 / 收益
 │       ├── property/            物业 · 放行名单 / 审核 / 看板
 │       └── profile/             我的 · 身份切换 / 说明
-├── cloudfunctions/              ← 云函数（7 个）
+├── cloudfunctions/              ← 云函数（8 个）
 │   ├── login/                   登录、用户资料、角色
 │   ├── spot/                    车位列表、详情、备案、审核
 │   ├── slot/                    空闲时段发布 / 下架
 │   ├── order/                   下单、支付、取消、入场、结算
 │   ├── access/                  道闸白名单、车牌核验、通行流水
 │   ├── admin/                   物业经营看板
-│   └── timer/                   定时任务（释放未支付 / 累计超时费 / 自动封账）
+│   ├── timer/                   定时任务（释放未支付 / 累计超时费 / 自动封账 / 提醒）
+│   └── notify/                  订阅消息发送器
 ├── shared/
 │   ├── cloudfn-common.js        云函数公共库（计价/视图/校验）
 │   └── sync-cloudfn.js          把公共库同步进各云函数目录
@@ -88,7 +89,7 @@ linli-parking/
 5. **建集合**：云开发控制台 → 数据库 → 新建 6 个集合
    `communities`、`users`、`spots`、`slots`、`orders`、`access_logs`
    每个集合权限设为 **「仅管理端可读写」**（所有读写都走云函数，前端不直连数据库）
-6. **部署云函数**：在开发者工具左侧 `cloudfunctions` 下，对 **7 个**函数逐个右键 →
+6. **部署云函数**：在开发者工具左侧 `cloudfunctions` 下，对 **8 个**函数逐个右键 →
    **「上传并部署：云端安装依赖」**
 7. **导入种子数据**：见 [`database/README.md`](database/README.md)
 8. **设置物业账号**：在 `users` 集合里把你自己的账号加一个字段 `isAdmin: true`，
@@ -127,7 +128,8 @@ linli-parking/
 | | `verify` | 按车牌核验是否放行 + 写入通行流水 |
 | | `logs` | 通行流水 |
 | `admin` | `stats` | GMV、出租率、三方分账、在场车辆 |
-| `timer` | —（定时触发） | 每 10 分钟：释放超时未支付订单、累计超时费、超时 6h 自动封账 |
+| `timer` | —（定时触发） | 每 10 分钟：释放超时未支付、累计超时费、超时 6h 自动封账、发送入场/到期/超时提醒 |
+| `notify` | `send` / `templates` | 订阅消息发送器（未配置模板时安静跳过） |
 
 > 云函数公共代码在 `shared/cloudfn-common.js`。**修改后必须运行** `node shared/sync-cloudfn.js`，
 > 因为云函数部署时只上传各自目录。
@@ -191,6 +193,9 @@ linli-parking/
 | **超时费封顶** 最多 2 倍日封顶 | `common.extraFeeOf` | 防止出现天价超时费被投诉 |
 | **定时结算** 每 10 分钟自动累计超时费 | `cloudfunctions/timer` | 不依赖客户端点「出场」，超时费才收得到 |
 | **车牌索引** 归一化 `plateKey` 精确查询 | `order/create` + `access/verify` | 避免全表扫描导致 >100 单时误拒放行 |
+| **取消退款** 开始前 ≥2h 全额，<2h 退 50% | `common.refundOf` | 给租客出口，同时防止临期恶意占用 |
+| **业主收回** 全额退租客 + 30% 补偿 | `order/ownerCancel` | 业主临时回来要停车是最高频纠纷 |
+| **订阅消息** 入场前 30min / 到期前 30min / 超时 | `notify` + `timer` | 没有提醒，超时费就变成"意外罚款" |
 
 ---
 
@@ -292,3 +297,28 @@ node tests/cloud-test.js
 - `order/checkin` 增加时间窗口校验（此前租客可绕过 `access/verify` 提前入场）
 - `assertAdmin` 只认 `isAdmin`，不再把可自行切换的 `role` 当作权限依据
 - 回归测试从 31 项扩展到 40 项，覆盖时区、车牌索引、时间窗口、定时结算
+
+
+### v0.3.0 — 补齐取消/退款与订阅消息
+
+| 能力 | 说明 |
+|---|---|
+| **租客取消** | 未支付直接取消；已支付：开始前 ≥2 小时全额退，<2 小时退 50%；已开始/已入场引导联系物业 |
+| **业主收回** | 业主可收回「待入场」订单，全额退租客，并从业主收入记 30% 补偿；时段自动重新上架 |
+| **订阅消息** | 新增 `notify` 云函数 + `timer` 定时提醒（即将入场 / 即将到期 / 已超时），模板与字段映射配置在 `communities.notifyTemplates`，未配置时安静跳过 |
+| **防重复提醒** | 订单记录 `remindedStart/remindedEnd/remindedOverdue`，同一事件只发一次 |
+
+配置订阅消息（`communities` 集合新增字段）：
+
+```json
+"notifyTemplates": {
+  "startSoon": { "templateId": "你的模板ID", "page": "pages/orders/orders", "fields": { "spot": "thing1", "time": "time2" } },
+  "endSoon":   { "templateId": "你的模板ID", "page": "pages/orders/orders", "fields": { "spot": "thing1", "time": "time2" } },
+  "overdue":   { "templateId": "你的模板ID", "page": "pages/orders/orders", "fields": { "spot": "thing1", "amount": "amount3" } }
+}
+```
+
+> `fields` 里的键名必须与你在小程序后台申请到的模板字段一致（如 `thing1` / `time2` / `amount3`）。
+> 小程序端在 `miniprogram/config.js` 的 `SUBSCRIBE_TMPL_IDS` 填入同样的模板 ID，支付成功后会请求授权。
+
+回归测试：**31 → 40 → 58 项**

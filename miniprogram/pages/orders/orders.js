@@ -64,16 +64,23 @@ Page({
 
   onCancel(e) {
     const id = e.currentTarget.dataset.id;
+    const item = (this.data.all || []).filter(function (o) { return o.id === id; })[0] || {};
+    const isPaid = item.statusLabel === '待入场';
     const that = this;
+
     wx.showModal({
-      title: '取消订单',
-      content: '确定要取消这笔未支付的订单吗？车位会重新放出。',
+      title: isPaid ? '取消并退款' : '取消订单',
+      content: isPaid
+        ? '开始前 2 小时以上取消，全额退款；2 小时内取消，退还 50%。退款原路退回。'
+        : '确定要取消这笔未支付的订单吗？车位会重新放出。',
+      confirmText: isPaid ? '退款' : '取消订单',
       confirmColor: '#ef4444',
       success: function (r) {
         if (!r.confirm) return;
         api.call('order', 'cancel', { orderId: id }).then(function (res) {
           if (res.code !== 0) { util.toast(res.msg); return; }
-          util.toast('已取消');
+          const refund = res.data && res.data.refund;
+          util.toast(refund > 0 ? '已取消，退款 ' + util.money(refund) : '已取消', 'success');
           that.load();
         });
       }

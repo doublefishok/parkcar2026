@@ -360,12 +360,53 @@ const routes = {
     const db = loadDB();
     const o = orderOf(p.orderId);
     if (!o) return { code: 404, msg: '订单不存在' };
-    if (o.status !== 'unpaid') return { code: 400, msg: '已支付订单请走退款流程' };
-    o.status = 'cancelled';
+
+    if (o.status === 'unpaid') {
+      o.status = 'cancelled';
+      o.cancelledAt = Date.now();
+      o.cancelBy = 'renter';
+      const sl = slotOf(o.slotId);
+      if (sl && sl.status === 'locked') sl.status = 'available';
+      persist();
+      return { code: 0, data: { refund: 0, status: 'cancelled' } };
+    }
+
+    if (o.status !== 'paid') return { code: 400, msg: '当前状态不支持取消' };
+    if (Date.now() >= util.slotTs(o.date, o.from)) {
+      return { code: 400, msg: '已到开始时间，无法自助取消，请联系物业处理' };
+    }
+
+    const refund = util.refundOf(o);
+    o.status = 'refunded';
+    o.refundAmount = refund;
+    o.refundedAt = Date.now();
+    o.cancelledAt = Date.now();
+    o.cancelBy = 'renter';
     const sl = slotOf(o.slotId);
-    if (sl && sl.status === 'locked') sl.status = 'available';
+    if (sl && sl.status === 'booked') sl.status = 'available';
     persist();
-    return { code: 0, data: {} };
+    return { code: 0, data: { refund: refund, status: 'refunded' } };
+  },
+
+  'order/ownerCancel': function (p) {
+    const db = loadDB();
+    const o = orderOf(p.orderId);
+    if (!o) return { code: 404, msg: '订单不存在' };
+    if (o.ownerOpenid !== db.user.openid) return { code: 403, msg: '无权操作' };
+    if (o.status !== 'paid') return { code: 400, msg: '仅可取消「待入场」的订单' };
+
+    const refund = o.baseAmount || 0;
+    const penalty = Math.round(refund * util.OWNER_CANCEL_PENALTY_RATIO);
+    o.status = 'refunded';
+    o.refundAmount = refund;
+    o.refundedAt = Date.now();
+    o.cancelledAt = Date.now();
+    o.cancelBy = 'owner';
+    o.ownerPenalty = penalty;
+    const sl = slotOf(o.slotId);
+    if (sl && sl.status === 'booked') sl.status = 'available';
+    persist();
+    return { code: 0, data: { refund: refund, penalty: penalty } };
   },
 
   'order/detail': function (p) {

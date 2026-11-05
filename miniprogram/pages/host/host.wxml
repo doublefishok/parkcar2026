@@ -169,6 +169,9 @@
         <view class="kv"><text class="kv-k">租客 / 车牌</text><text class="kv-v">{{item.renterName}} · {{item.plate}}</text></view>
         <view class="kv"><text class="kv-k">订单金额</text><text class="kv-v">{{item.totalText}}</text></view>
         <view class="kv"><text class="kv-k">我的收入</text><text class="kv-v green">{{item.incomeText}}</text></view>
+        <view class="row" style="justify-content: flex-end; margin-top: 16rpx;" wx:if="{{item.statusLabel === '待入场'}}">
+          <view class="btn btn-sm btn-ghost" bindtap="onOwnerCancel" data-id="{{item.id}}">收回车位</view>
+        </view>
       </view>
     </block>
     <view class="empty" wx:else>

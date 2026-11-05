@@ -17,6 +17,10 @@ module.exports = {
   // 是否允许在 Mock 模式下"模拟支付"（正式版关闭）
   ALLOW_MOCK_PAY: true,
 
+  // 订阅消息模板 ID（在小程序后台申请后填入；为空则跳过订阅授权，不影响主流程）
+  // 对应云函数 communities.notifyTemplates 中配置的模板
+  SUBSCRIBE_TMPL_IDS: [],
+
   // 版本号
-  VERSION: '0.1.0'
+  VERSION: '0.3.0'
 };

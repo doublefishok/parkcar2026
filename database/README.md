@@ -30,11 +30,20 @@
   "totalSpots": 386,
   "barrier": "捷顺 JSD-3B2",
   "barrierMode": "L2",
-  "split": { "platform": 0.1, "property": 0.15, "owner": 0.75 }
+  "split": { "platform": 0.1, "property": 0.15, "owner": 0.75 },
+  "notifyTemplates": {
+    "startSoon": { "templateId": "TMPL_ID_START", "page": "pages/orders/orders", "fields": { "spot": "thing1", "time": "time2" } },
+    "endSoon": { "templateId": "TMPL_ID_END", "page": "pages/orders/orders", "fields": { "spot": "thing1", "time": "time2" } },
+    "overdue": { "templateId": "TMPL_ID_LATE", "page": "pages/orders/orders", "fields": { "spot": "thing1", "amount": "amount3" } }
+  }
 }
 ```
 
 > `split` 三项之和必须为 1。`barrierMode` 取 `L1` / `L2` / `L3`，仅用于前端展示。
+>
+> `notifyTemplates` 为订阅消息模板配置：`templateId` 在小程序后台「订阅消息」中申请；
+> `fields` 的键名必须与模板里的字段（`thing1`/`time2`/`amount3` 等）完全一致。
+> 留空或删除该字段时，`notify` 与 `timer` 会安静跳过，不影响主流程。
 
 ### 2. 演示车位（可选，用于内部测试）
 

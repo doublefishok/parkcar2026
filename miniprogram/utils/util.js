@@ -7,6 +7,8 @@
 
 const TZ_OFFSET = 8 * 3600 * 1000;
 const OVERDUE_CAP_RATIO = 2;
+const CANCEL_RULES = { freeBeforeMs: 2 * 3600 * 1000, feeRatio: 0.5 };
+const OWNER_CANCEL_PENALTY_RATIO = 0.3;
 
 function pad(n) {
   return n < 10 ? '0' + n : '' + n;
@@ -89,6 +91,18 @@ function isValidPlate(p) {
 function calcPrice(spot, slot) {
   const h = hoursBetween(slot.from, slot.to);
   return Math.round(Math.min(h * spot.pricePerHour, spot.dayCap));
+}
+
+/**
+ * 租客取消已支付订单的退款金额
+ * 开始前 >= 2 小时：全额；< 2 小时：退 50%
+ */
+function refundOf(order) {
+  const base = order.baseAmount || 0;
+  if (order.status !== 'paid') return 0;
+  const start = slotTs(order.date, order.from);
+  if (start - Date.now() >= CANCEL_RULES.freeBeforeMs) return base;
+  return Math.round(base * (1 - CANCEL_RULES.feeRatio));
 }
 
 /** 订单展示态 */
@@ -183,6 +197,12 @@ function buildOrderView(order, slot, spot, split) {
     showCode: order.status === 'paid' || order.status === 'checked_in',
     canCheckin: order.status === 'paid',
     canCheckout: order.status === 'checked_in',
+    // 租客可自助取消：未支付 / 已支付但还没开始
+    canRenterCancel: order.status === 'unpaid' || order.status === 'paid',
+    refund: refundOf(order),
+    refundText: money(order.refundAmount || 0),
+    refunded: order.status === 'refunded',
+    cancelBy: order.cancelBy || '',
     isMine: !!order.__isMine
   };
 }
@@ -214,6 +234,9 @@ module.exports = {
   normPlate: normPlate,
   isValidPlate: isValidPlate,
   calcPrice: calcPrice,
+  refundOf: refundOf,
+  CANCEL_RULES: CANCEL_RULES,
+  OWNER_CANCEL_PENALTY_RATIO: OWNER_CANCEL_PENALTY_RATIO,
   orderStatusMeta: orderStatusMeta,
   extraFeeOf: extraFeeOf,
   buildSlotView: buildSlotView,

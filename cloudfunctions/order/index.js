@@ -131,15 +131,68 @@ exports.main = async function (event) {
       return common.ok({ order: Object.assign({}, o, { status: 'paid', code: code, payId: payId }) });
     }
 
+    /* ---------- 取消订单（租客） ----------
+     * 未支付            → 直接取消，释放车位
+     * 已支付、未到开始时间 → 按规则退款：开始前 ≥2h 全额，<2h 退 50%
+     * 已到开始时间/已入场 → 不允许自助取消，引导联系物业
+     */
     if (action === 'cancel') {
       const o = await docOrNull('orders', event.orderId);
       if (!o) return common.fail('订单不存在', 404);
       if (o.renterOpenid !== OPENID) return common.fail('无权操作', 403);
-      if (o.status !== 'unpaid') return common.fail('已支付订单请走退款流程');
 
-      await db.collection('orders').doc(o._id).update({ data: { status: 'cancelled', cancelledAt: Date.now() } });
-      await db.collection('slots').where({ _id: o.slotId, status: 'locked' }).update({ data: { status: 'available' } });
-      return common.ok({});
+      const now = Date.now();
+
+      if (o.status === 'unpaid') {
+        await db.collection('orders').doc(o._id).update({
+          data: { status: 'cancelled', cancelledAt: now, cancelBy: 'renter' }
+        });
+        await db.collection('slots').where({ _id: o.slotId, status: 'locked' })
+          .update({ data: { status: 'available' } });
+        return common.ok({ refund: 0, status: 'cancelled' });
+      }
+
+      if (o.status !== 'paid') return common.fail('当前状态不支持取消');
+
+      const start = common.slotTs(o.date, o.from);
+      if (now >= start) return common.fail('已到开始时间，无法自助取消，请联系物业处理');
+
+      const refund = common.refundOf(o);
+      await db.collection('orders').doc(o._id).update({
+        data: {
+          status: 'refunded', refundAmount: refund, refundedAt: now,
+          cancelledAt: now, cancelBy: 'renter'
+        }
+      });
+      await db.collection('slots').where({ _id: o.slotId, status: 'booked' })
+        .update({ data: { status: 'available' } });
+
+      return common.ok({ refund: refund, status: 'refunded' });
+    }
+
+    /* ---------- 业主取消（临时收回车位） ----------
+     * 全额退租客，并在订单上记一笔业主补偿（后续结算从业主收入扣）
+     */
+    if (action === 'ownerCancel') {
+      const o = await docOrNull('orders', event.orderId);
+      if (!o) return common.fail('订单不存在', 404);
+      if (o.ownerOpenid !== OPENID) return common.fail('无权操作', 403);
+      if (o.status !== 'paid') return common.fail('仅可取消「待入场」的订单，已入场订单请联系物业');
+
+      const now = Date.now();
+      const refund = o.baseAmount || 0;
+      const penalty = common.ownerPenaltyOf(o);
+
+      await db.collection('orders').doc(o._id).update({
+        data: {
+          status: 'refunded', refundAmount: refund, refundedAt: now, cancelledAt: now,
+          cancelBy: 'owner', ownerPenalty: penalty
+        }
+      });
+      await db.collection('slots').where({ _id: o.slotId, status: 'booked' })
+        .update({ data: { status: 'available' } });
+
+      return common.ok({ refund: refund, penalty: penalty });
     }
 
     if (action === 'detail') {

@@ -28,6 +28,7 @@ const order = load('order');
 const access = load('access');
 const admin = load('admin');
 const timer = load('timer');
+const notify = load('notify');
 
 const common = require(path.join(ROOT, 'order', 'common.js'));
 
@@ -35,6 +36,7 @@ const d0 = common.dateStr(0);
 const d1 = common.dateStr(1);
 const dM1 = common.dateStr(-1);
 const dM2 = common.dateStr(-2);
+const d2 = common.dateStr(2);
 
 let pass = 0, failn = 0;
 function check(label, cond, extra) {
@@ -45,7 +47,12 @@ function section(t) { console.log('\n[' + t + ']'); }
 
 function seed() {
   fake.__seed('communities', [{
-    _id: 'C001', name: '阳光花园', totalSpots: 386, barrier: '捷顺 JSD-3B2', split: common.SPLIT
+    _id: 'C001', name: '阳光花园', totalSpots: 386, barrier: '捷顺 JSD-3B2', split: common.SPLIT,
+    notifyTemplates: {
+      startSoon: { templateId: 'TMPL_START', fields: { spot: 'thing1', time: 'time2' } },
+      endSoon: { templateId: 'TMPL_END', fields: { spot: 'thing1', time: 'time2' } },
+      overdue: { templateId: 'TMPL_LATE', fields: { spot: 'thing1', amount: 'amount3' } }
+    }
   }]);
   fake.__seed('users', [
     { _id: 'U1', _openid: 'owner-openid', nickName: '张伟', phone: '13866216621', role: 'owner' },
@@ -61,7 +68,8 @@ function seed() {
     { _id: 'L0', spotId: 'S2', ownerOpenid: 'u2', date: d0, from: '00:00', to: '23:59', status: 'available' },
     { _id: 'L1', spotId: 'S1', ownerOpenid: 'owner-openid', date: d1, from: '08:00', to: '20:00', status: 'available' },
     { _id: 'L2', spotId: 'S2', ownerOpenid: 'u2', date: d1, from: '09:00', to: '18:00', status: 'available' },
-    { _id: 'L3', spotId: 'S2', ownerOpenid: 'u2', date: dM1, from: '08:00', to: '20:00', status: 'booked' }
+    { _id: 'L3', spotId: 'S2', ownerOpenid: 'u2', date: dM1, from: '08:00', to: '20:00', status: 'booked' },
+    { _id: 'L9', spotId: 'S1', ownerOpenid: 'owner-openid', date: d2, from: '08:00', to: '20:00', status: 'available' }
   ]);
   fake.__seed('orders', []);
   fake.__seed('access_logs', []);
@@ -218,12 +226,90 @@ function seed() {
   r = await slot.main({ action: 'publishWeekend' });
   check('周末模板发布成功', r.code === 0, r.msg);
   if (r.code === 0) {
-    const first = r.data.list[0];
-    check('周末日期落在周六（东八区）',
-      common.weekdayCn(first.date) === '周六', first.date + ' ' + common.weekdayCn(first.date));
+    // 周六已被上方手工发布的时段占用，故可能只生成周日；断言生成的日期都属于周末
+    const allWeekend = r.data.list.every(function (x) {
+      return ['周六', '周日'].indexOf(common.weekdayCn(x.date)) >= 0;
+    });
+    check('周末模板生成的日期都落在周六/周日（东八区）',
+      allWeekend, r.data.list.map(function (x) { return x.date + ' ' + common.weekdayCn(x.date); }).join(','));
   }
   r = await spot.main({ action: 'my' });
   check('我的车位带时段', r.code === 0 && r.data.spot._id === 'S1' && r.data.slots.length >= 2, r.msg);
+
+  /* ============ 取消与退款 ============ */
+  section('取消与退款');
+  // 纯函数：退款比例
+  const farOrder = { status: 'paid', baseAmount: 100, date: d1, from: '08:00' };
+  check('开始前 >2h 取消 → 全额退款', common.refundOf(farOrder) === 100, common.refundOf(farOrder));
+
+  const soonMs = Date.now() + 60 * 60 * 1000;
+  const cnSoon = new Date(soonMs + 8 * 3600000);
+  const soonDate = cnSoon.getUTCFullYear() + '-' + common.pad(cnSoon.getUTCMonth() + 1) + '-' + common.pad(cnSoon.getUTCDate());
+  const soonTime = common.pad(cnSoon.getUTCHours()) + ':' + common.pad(cnSoon.getUTCMinutes());
+  const nearOrder = { status: 'paid', baseAmount: 100, date: soonDate, from: soonTime };
+  check('开始前 <2h 取消 → 退 50%', common.refundOf(nearOrder) === 50, common.refundOf(nearOrder));
+
+  // 已支付订单取消
+  fake.__setOpenid('renter-openid');
+  r = await order.main({ action: 'create', slotId: 'L2', renterName: '刘先生', plate: '沪H·7K77' });
+  const oidCancel = r.data.order._id;
+  await order.main({ action: 'pay', orderId: oidCancel });
+  r = await order.main({ action: 'cancel', orderId: oidCancel });
+  check('已支付订单可取消并退款', r.code === 0 && r.data.refund === 50, r);
+  const cancelledOrder = fake.__store.orders.find(o => o._id === oidCancel);
+  check('订单状态 refunded', cancelledOrder.status === 'refunded', cancelledOrder.status);
+  check('车位释放回可租', fake.__store.slots.find(s => s._id === 'L2').status === 'available');
+  check('记录退款金额与取消方', cancelledOrder.refundAmount === 50 && cancelledOrder.cancelBy === 'renter');
+
+  // 业主取消
+  fake.__setOpenid('renter-openid');
+  r = await order.main({ action: 'create', slotId: 'L9', renterName: '刘先生', plate: '沪H·7K77' });
+  const oidOwnerCancel = r.data.order._id;
+  await order.main({ action: 'pay', orderId: oidOwnerCancel });
+  fake.__setOpenid('owner-openid');
+  r = await order.main({ action: 'ownerCancel', orderId: oidOwnerCancel });
+  check('业主可收回车位并全额退款', r.code === 0 && r.data.refund === 60, r);
+  check('记录业主补偿金额（30%）', fake.__store.orders.find(o => o._id === oidOwnerCancel).ownerPenalty === 18);
+  check('收回后时段重新可租', fake.__store.slots.find(s => s._id === 'L9').status === 'available');
+
+  // 已入场不可取消
+  fake.__setOpenid('renter-openid');
+  r = await order.main({ action: 'cancel', orderId: oidTomorrow });
+  check('已入场/已开始订单不可自助取消', r.code !== 0, r.msg);
+
+  /* ============ 订阅消息 ============ */
+  section('订阅消息');
+  fake.__setOpenid('admin-openid');
+  r = await notify.main({ action: 'templates' });
+  check('可读取模板配置', r.code === 0 && !!r.data.templates.startSoon, r.msg);
+  const beforeSent = fake.__sent.length;
+  r = await notify.main({ action: 'send', key: 'startSoon', toOpenid: 'renter-openid', data: { thing1: { value: 'B1-082' } } });
+  check('发送订阅消息成功', r.code === 0 && r.data.sent === true, r);
+  check('已调用 openapi.subscribeMessage.send', fake.__sent.length === beforeSent + 1);
+  r = await notify.main({ action: 'send', key: 'notExist', toOpenid: 'x' });
+  check('未配置模板时安静跳过', r.code === 0 && r.data.skipped === true, r);
+
+  // 定时任务发送「即将入场」提醒
+  const startMs = Date.now() + 20 * 60 * 1000;
+  const cnS = new Date(startMs + 8 * 3600000);
+  const sDate = cnS.getUTCFullYear() + '-' + common.pad(cnS.getUTCMonth() + 1) + '-' + common.pad(cnS.getUTCDate());
+  const sFrom = common.pad(cnS.getUTCHours()) + ':' + common.pad(cnS.getUTCMinutes());
+  const cnE = new Date(startMs + 2 * 3600 * 1000 + 8 * 3600000);
+  const sTo = common.pad(cnE.getUTCHours()) + ':' + common.pad(cnE.getUTCMinutes());
+  fake.__store.orders.push({
+    _id: 'RM1', orderNo: 'RM1', slotId: 'LRM1', spotId: 'S2', ownerOpenid: 'u2',
+    renterOpenid: 'renter-openid', renterName: '提醒测试', plate: '沪R1111', plateKey: '沪R1111',
+    date: sDate, from: sFrom, to: sTo, baseAmount: 20, extraAmount: 0,
+    status: 'paid', code: '333333', createdAt: Date.now(), paidAt: Date.now(), inAt: null, outAt: null
+  });
+  const beforeRemind = fake.__sent.length;
+  r = await timer.main({});
+  check('定时任务触发「即将入场」提醒', r.code === 0 && r.data.remindStart === 1, r.data);
+  check('提醒消息已发送', fake.__sent.length === beforeRemind + 1 && fake.__sent[fake.__sent.length - 1].templateId === 'TMPL_START');
+  check('订单标记已提醒（防重复发送）', fake.__store.orders.find(o => o._id === 'RM1').remindedStart > 0);
+  const sentCount = fake.__sent.length;
+  await timer.main({});
+  check('重复执行不会重复提醒', fake.__sent.length === sentCount);
 
   console.log('\n结果: ' + pass + ' 通过, ' + failn + ' 失败');
   process.exit(failn ? 1 : 0);

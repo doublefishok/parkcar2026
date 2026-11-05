@@ -82,6 +82,15 @@ Page({
             that.setData({ paying: false });
             return;
           }
+          // 支付成功后申请订阅消息授权（一次性订阅，用于入场/到期提醒）
+          if (config.SUBSCRIBE_TMPL_IDS && config.SUBSCRIBE_TMPL_IDS.length) {
+            wx.requestSubscribeMessage({
+              tmplIds: config.SUBSCRIBE_TMPL_IDS,
+              success() {},
+              fail() {}
+            });
+          }
+
           that.setData({
             paying: false,
             showSuccess: true,

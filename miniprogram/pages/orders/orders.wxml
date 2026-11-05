@@ -22,6 +22,7 @@
       <view class="kv"><text class="kv-k">车牌</text><text class="kv-v">{{item.plate}}</text></view>
       <view class="kv"><text class="kv-k">金额</text><text class="kv-v">{{item.totalText}}</text></view>
       <view class="kv" wx:if="{{item.overdue}}"><text class="kv-k red">超时费（1.5 倍）</text><text class="kv-v red">{{item.extraText}}</text></view>
+      <view class="kv" wx:if="{{item.refunded}}"><text class="kv-k">退款</text><text class="kv-v green">{{item.refundText}} 已原路退回</text></view>
 
       <!-- 通行码 -->
       <view class="code-box" wx:if="{{item.showCode}}">
@@ -33,6 +34,7 @@
       <view class="order-actions">
         <view class="btn btn-sm btn-ghost" bindtap="copyCode" data-code="{{item.code}}" wx:if="{{item.showCode}}">复制通行码</view>
         <view class="btn btn-sm btn-ghost" bindtap="onCancel" data-id="{{item.id}}" wx:if="{{item.statusLabel === '待支付'}}">取消订单</view>
+        <view class="btn btn-sm btn-ghost" bindtap="onCancel" data-id="{{item.id}}" wx:if="{{item.statusLabel === '待入场'}}">取消并退款</view>
         <view class="btn btn-sm btn-blue" bindtap="onCheckin" data-id="{{item.id}}" wx:if="{{mockMode && item.canCheckin}}">模拟入场</view>
         <view class="btn btn-sm btn-primary" bindtap="onCheckout" data-id="{{item.id}}" wx:if="{{mockMode && item.canCheckout}}">模拟出场结算</view>
       </view>
